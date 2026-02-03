@@ -15,9 +15,10 @@ const io = socketIO(server, {
       'http://localhost:3000',
       'http://127.0.0.1:5500',
       'http://localhost:5500',
+      'https://krishthakur248.github.io',
       process.env.CORS_ORIGIN || '*'
     ],
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
   },
 });
@@ -31,9 +32,12 @@ const corsOptions = {
     'http://localhost:3000',
     'http://127.0.0.1:5500',
     'http://localhost:5500',
+    'https://krishthakur248.github.io',
     process.env.CORS_ORIGIN || '*'
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));
