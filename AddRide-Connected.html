@@ -612,14 +612,56 @@
         // Load active trip if exists
         async function loadActiveTrip() {
             try {
+                console.log('[DEBUG] loadActiveTrip called');
+                
+                // PRIMARY: Fetch from backend database
+                try {
+                    console.log('[DEBUG] Fetching driver trips from backend...');
+                    const response = await apiClient.get('/trips/driver/my-trips');
+                    
+                    if (response && response.success && response.trips && response.trips.length > 0) {
+                        // Find the active trip (status = 'active')
+                        const activeTrip = response.trips.find(trip => trip.status === 'active');
+                        
+                        if (activeTrip) {
+                            console.log('[DEBUG] ✅ Active trip found in database:', activeTrip._id);
+                            // Update localStorage with latest trip ID
+                            localStorage.setItem('activeTrip', activeTrip._id);
+                            localStorage.setItem('activeTripCode', activeTrip.tripCode);
+                            
+                            // Load the trip
+                            await loadTripDetails(activeTrip._id);
+                            return;
+                        } else {
+                            console.log('[DEBUG] No active trip found in database');
+                            localStorage.removeItem('activeTrip');
+                            localStorage.removeItem('activeTripCode');
+                        }
+                    }
+                } catch (dbError) {
+                    console.log('[DEBUG] Error fetching from database, falling back to localStorage:', dbError.message);
+                }
+                
+                // FALLBACK: Check localStorage
                 const activeTripId = localStorage.getItem('activeTrip');
-                console.log('[DEBUG] loadActiveTrip called, activeTrip:', activeTripId);
+                console.log('[DEBUG] Checking localStorage, activeTrip:', activeTripId);
 
                 if (!activeTripId) {
                     console.log('[DEBUG] No active trip in localStorage');
                     return; // No active trip
                 }
 
+                // Load trip from localStorage ID
+                await loadTripDetails(activeTripId);
+                
+            } catch (error) {
+                console.error('[ERROR] loadActiveTrip failed:', error);
+            }
+        }
+
+        // Helper function to load trip details
+        async function loadTripDetails(activeTripId) {
+            try {
                 const response = await TripServiceAPI.getTripDetails(activeTripId);
                 console.log('[DEBUG] getTripDetails response:', response);
 
@@ -708,7 +750,7 @@
                     document.getElementById('activeTripSection').classList.add('hidden');
                 }
             } catch (error) {
-                console.error('[ERROR] Error loading active trip:', error);
+                console.error('[ERROR] Error loading trip details:', error);
                 // On error, clear the active trip and show form
                 localStorage.removeItem('activeTrip');
                 localStorage.removeItem('activeTripCode');
