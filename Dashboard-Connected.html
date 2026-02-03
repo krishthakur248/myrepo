@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Car Pulling - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "secondary": "#00d26a",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111a22",
+                        "surface-dark": "#192633",
+                        "surface-darker": "#233648"
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Space Grotesk', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111a22; }
+        ::-webkit-scrollbar-thumb { background: #233648; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #137fec; }
+        #dashboardMap { height: 100%; border-radius: 8px; }
+        .loading-spinner {
+            border: 3px solid rgba(19, 127, 236, 0.1);
+            border-top: 3px solid #137fec;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .ride-card {
+            transition: all 0.3s ease;
+        }
+        .ride-card:hover {
+            transform: translateY(-4px);
+            border-color: #137fec;
+        }
+        .profile-dropdown {
+            z-index: 999999 !important;
+            position: fixed !important;
+        }
+        .map-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .map-modal.active {
+            display: flex;
+        }
+        .map-modal-content {
+            background: #192633;
+            border-radius: 1rem;
+            padding: 20px;
+            width: 90%;
+            height: 90%;
+            max-width: 600px;
+            border: 1px solid #233648;
+        }
+        #pickerMap {
+            height: 400px;
+            border-radius: 1rem;
+        }
+        /* FORCE MAP BEHIND ALL UI  (May cause underlaping)*/
+        .leaflet-container,
+        .leaflet-pane,
+        .leaflet-map-pane,
+        .leaflet-tile-pane,
+        .leaflet-overlay-pane,
+        .leaflet-shadow-pane,
+        .leaflet-marker-pane,
+        .leaflet-popup-pane {
+            z-index: 0 !important;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-white font-display overflow-hidden h-screen flex flex-col">
+
+    <!-- Top Navigation -->
+    <header class="h-16 border-b border-[#233648] bg-[#111a22] flex items-center justify-between px-6 z-20 shrink-0">
+        <div class="flex items-center gap-3 text-white">
+            <div class="size-8 bg-primary/20 rounded-full flex items-center justify-center text-primary">
+                <span class="material-symbols-outlined">share_location</span>
+            </div>
+            <h2 class="text-xl font-bold tracking-tight">Car Pulling</h2>
+        </div>
+        <div class="flex items-center gap-4">
+            <!-- Settings Button -->
+            <button class="p-2 rounded-full hover:bg-[#233648] transition-colors" title="Settings">
+                <span class="material-symbols-outlined text-[24px]">settings</span>
+            </button>
+
+            <!-- Profile Dropdown Button -->
+            <div class="relative">
+                <button id="profileBtn" class="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-[#233648] transition-colors z-10 relative">
+                    <span class="material-symbols-outlined text-[24px]">account_circle</span>
+                    <span class="material-symbols-outlined text-[16px]">arrow_drop_down</span>
+                </button>
+                <!-- Dropdown Menu -->
+                <div id="profileDropdown" class="profile-dropdown right-5 top-16 w-48 bg-[#192633] border border-[#233648] rounded-lg shadow-2xl hidden">
+                    <div class="p-3 border-b border-[#233648]">
+                        <p class="text-sm font-semibold text-white">Profile</p>
+                        <p class="text-xs text-[#92adc9]" id="profileEmail">Loading...</p>
+                    </div>
+                    <a href="#" class="flex items-center gap-2 px-4 py-2 text-[#92adc9] hover:text-white hover:bg-[#233648] transition-colors text-sm">
+                        <span class="material-symbols-outlined text-[18px]">person</span>
+                        My Profile
+                    </a>
+                    <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-600/10 transition-colors text-sm border-t border-[#233648]">
+                        <span class="material-symbols-outlined text-[18px]">logout</span>
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- Left Sidebar (Search & Rides) -->
+        <aside class="w-[400px] flex flex-col bg-[#111a22] border-r border-[#233648] shrink-0 z-10 overflow-hidden">
+
+            <!-- Search Area -->
+            <div class="p-6 pb-2 flex-shrink-0">
+                <div class="flex flex-col gap-2">
+                    <label class="text-[#92adc9] text-xs font-bold uppercase tracking-wider ml-1">Pickup Location</label>
+                    <div class="relative group">
+                        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-secondary">
+                            <span class="material-symbols-outlined">location_on</span>
+                        </div>
+                        <input
+                            class="w-full h-14 bg-[#192633] text-white placeholder-[#5a6b7c] pl-12 pr-12 rounded-2xl border border-transparent focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all shadow-[0_4px_14px_0_rgba(0,0,0,0.2)]"
+                            placeholder="Your location"
+                            type="text"
+                            id="pickupInput"
+                            readonly
+                        >
+                        <button onclick="openMapModal('pickup')" class="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-[#92adc9] hover:text-white rounded-full hover:bg-[#233648] transition-colors">
+                            <span class="material-symbols-outlined text-[20px]">map</span>
+                        </button>
+                    </div>
+                    <div class="text-xs text-[#5a6b7c] ml-1 flex gap-2">
+                        <button type="button" onclick="useCurrentLocation()" class="text-secondary hover:text-primary font-medium">Use Current</button>
+                        <span class="text-[#233648]">•</span>
+                        <button type="button" onclick="openMapModal('pickup')" class="text-secondary hover:text-primary font-medium">Pick on Map</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2 mt-4">
+                    <label class="text-[#92adc9] text-xs font-bold uppercase tracking-wider ml-1">Destination</label>
+                    <div class="relative group">
+                        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-primary">
+                            <span class="material-symbols-outlined">location_on</span>
+                        </div>
+                        <input
+                            class="w-full h-14 bg-[#192633] text-white placeholder-[#5a6b7c] pl-12 pr-12 rounded-2xl border border-transparent focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all shadow-[0_4px_14px_0_rgba(0,0,0,0.2)]"
+                            placeholder="Where to?"
+                            type="text"
+                            id="destinationInput"
+                        >
+                        <button onclick="openMapModal('destination')" class="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-[#92adc9] hover:text-white rounded-full hover:bg-[#233648] transition-colors">
+                            <span class="material-symbols-outlined text-[20px]">map</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coordinates Display -->
+            <div class="px-6 grid grid-cols-2 gap-3 py-3 flex-shrink-0">
+                <div class="bg-[#192633] p-3 rounded-2xl border border-[#233648]">
+                    <div class="text-[#92adc9] text-xs font-medium mb-1">Latitude</div>
+                    <input type="text" id="destLat" readonly class="text-white text-sm font-bold bg-transparent w-full" placeholder="Lat">
+                </div>
+                <div class="bg-[#192633] p-3 rounded-2xl border border-[#233648]">
+                    <div class="text-[#92adc9] text-xs font-medium mb-1">Longitude</div>
+                    <input type="text" id="destLng" readonly class="text-white text-sm font-bold bg-transparent w-full" placeholder="Lng">
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-2 gap-3 px-6 py-3 flex-shrink-0">
+                <button onclick="searchRides()" class="bg-primary hover:bg-blue-600 text-white px-4 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-lg">
+                    <span class="material-symbols-outlined text-[18px]">search</span>
+                    Search
+                </button>
+                <a href="AddRide-Connected.html" class="bg-secondary hover:bg-green-700 text-black px-4 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-lg">
+                    <span class="material-symbols-outlined text-[18px]">directions_car</span>
+                    Offer
+                </a>
+            </div>
+
+            <!-- Tabbed Layout: Available Rides vs My Trips -->
+            <div class="flex-1 overflow-hidden flex flex-col px-6 pt-4 pb-2">
+
+                <!-- Tab Headers -->
+                <div class="flex gap-2 mb-3 flex-shrink-0">
+                    <button onclick="switchTab('available')" id="availableTab" class="px-4 py-2 rounded-lg font-bold text-sm bg-primary text-white transition-all">
+                        Available Rides
+                    </button>
+                    <button onclick="switchTab('mytrips')" id="mytripsTab" class="px-4 py-2 rounded-lg font-bold text-sm bg-[#233648] text-[#92adc9] hover:bg-[#2d465e] transition-all">
+                        My Trips <span id="acceptedCount" class="text-xs ml-1 px-2 py-0.5 rounded-full bg-secondary/20 text-secondary">0</span>
+                    </button>
+                </div>
+
+                <!-- Content Block -->
+                <div class="flex-1 overflow-hidden flex flex-col min-w-0">
+
+                    <!-- Available Rides Tab -->
+                    <div id="availableRidesTab" class="flex-1 overflow-y-auto flex flex-col gap-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <h3 class="text-white font-bold text-lg">Available Rides</h3>
+                            <span id="matchCount" class="text-xs font-medium px-2 py-1 rounded-full bg-primary/20 text-primary">0 Found</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto flex flex-col gap-4" id="ridesList">
+                            <div class="text-center py-8 text-[#92adc9] text-sm">
+                                <span class="material-symbols-outlined text-4xl block mb-2 opacity-50">info</span>
+                                Enter destination and search for rides
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- My Trips Tab -->
+                    <div id="mytripsRidesTab" class="flex-1 overflow-y-auto flex flex-col gap-2 hidden">
+                        <div class="flex items-center justify-between mb-1">
+                            <h3 class="text-white font-bold text-lg">My Trips</h3>
+                        </div>
+                        <div class="flex-1 overflow-y-auto flex flex-col gap-2" id="acceptedRidesList">
+                            <div class="text-center py-8 text-[#92adc9] text-sm">
+                                <span class="material-symbols-outlined text-4xl block mb-2 opacity-50">inbox</span>
+                                No accepted rides yet
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Help -->
+            <!-- <div class="p-4 border-t border-[#233648] bg-[#151f2a] flex-shrink-0">
+                <button onclick="showNotification('Help coming soon!', 'info')" class="flex items-center gap-3 text-[#92adc9] hover:text-white transition-colors w-full px-2">
+                    <span class="material-symbols-outlined">help</span>
+                    <span class="text-sm font-medium">Help Center</span>
+                </button>
+            </div> -->
+        </aside>
+
+        <!-- Main Map Area -->
+        <main class="flex-1 relative bg-[#0f151b] overflow-hidden">
+            <div id="dashboardMap" class="w-full h-full"></div>
+
+            <!-- Map Controls -->
+            <div class="absolute bottom-8 right-8 z-30 flex flex-col gap-2">
+                <button onclick="refreshMap()" class="size-10 bg-[#192633] text-white rounded-xl shadow-lg border border-[#233648] hover:bg-[#233648] hover:border-primary/50 transition-all flex items-center justify-center">
+                    <span class="material-symbols-outlined">my_location</span>
+                </button>
+                <div class="flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#233648]">
+                    <button onclick="zoomIn()" class="size-10 bg-[#192633] text-white hover:bg-[#233648] transition-colors flex items-center justify-center border-b border-[#233648]">
+                        <span class="material-symbols-outlined">add</span>
+                    </button>
+                    <button onclick="zoomOut()" class="size-10 bg-[#192633] text-white hover:bg-[#233648] transition-colors flex items-center justify-center">
+                        <span class="material-symbols-outlined">remove</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Map Legend -->
+            <div class="absolute bottom-8 left-8 z-30 bg-[#192633]/90 backdrop-blur-sm p-3 rounded-xl border border-[#233648] shadow-lg">
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-1 bg-primary rounded-full"></div>
+                        <span class="text-xs text-white font-medium">Your Location</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-1 bg-secondary rounded-full"></div>
+                        <span class="text-xs text-white font-medium">Destination</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Map Picker Modal -->
+    <div id="mapModal" class="map-modal">
+        <div class="map-modal-content">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white">Select Location on Map</h3>
+                <button onclick="closeMapModal()" class="text-[#92adc9] hover:text-white">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+            <div id="pickerMap" class="mb-4"></div>
+            <p class="text-sm text-[#92adc9] mb-4">Click on the map to select your destination</p>
+            <div class="flex gap-2">
+                <button onclick="confirmMapSelection()" class="flex-1 bg-primary hover:bg-blue-600 text-white py-2 rounded-lg font-bold transition-colors">
+                    Confirm Location
+                </button>
+                <button onclick="closeMapModal()" class="flex-1 bg-[#233648] hover:bg-[#2d465e] text-white py-2 rounded-lg font-bold transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Join Ride Modal -->
+    <div id="joinRideModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center" style="z-index: 9999;">
+        <div class="bg-[#192633] rounded-2xl p-6 max-w-md w-full mx-4 border border-[#233648]">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white">Join This Ride?</h3>
+                <button onclick="closeJoinModal()" class="text-[#92adc9] hover:text-white">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+            <div id="joinRideContent" class="space-y-3 mb-6">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="flex gap-2">
+                <button onclick="confirmJoinRide()" class="flex-1 bg-primary hover:bg-blue-600 text-white py-2 rounded-xl font-bold transition-colors">
+                    Join Ride
+                </button>
+                <button onclick="closeJoinModal()" class="flex-1 bg-[#233648] hover:bg-[#2d465e] text-white py-2 rounded-xl font-bold transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Driver Details Modal -->
+    <div id="driverDetailsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center" style="z-index: 9999;">
+        <div class="bg-[#192633] rounded-2xl p-6 max-w-md w-full mx-4 border border-[#233648]">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white">Driver Details</h3>
+                <button onclick="closeDriverDetailsModal()" class="text-[#92adc9] hover:text-white">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+            <div id="driverDetailsContent" class="space-y-3 mb-6">
+                <!-- Populated dynamically -->
+            </div>
+            <button onclick="closeDriverDetailsModal()" class="w-full bg-primary hover:bg-blue-600 text-white py-2 rounded-xl font-bold transition-colors">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Driver Location Modal -->
+    <div id="driverLocationModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center" style="z-index: 9999;">
+        <div class="bg-[#192633] rounded-2xl p-4 max-w-2xl w-full mx-4 border border-[#233648]">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white">Driver Location</h3>
+                <button onclick="closeDriverLocationModal()" class="text-[#92adc9] hover:text-white">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+            <div id="driverLocationMap" style="height: 400px; border-radius: 12px; overflow: hidden;"></div>
+            <div class="mt-4 flex gap-2">
+                <button onclick="closeDriverLocationModal()" class="flex-1 bg-primary hover:bg-blue-600 text-white py-2 rounded-xl font-bold transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trip Details Modal -->
+    <div id="tripDetailsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center" style="z-index: 9999;">
+        <div class="bg-[#192633] rounded-2xl p-6 max-w-md w-full mx-4 border border-[#233648]">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white">Trip Details</h3>
+                <button onclick="closeTripDetailsModal()" class="text-[#92adc9] hover:text-white">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+            <div id="tripDetailsContent" class="space-y-4 mb-6">
+                <!-- Populated dynamically -->
+            </div>
+            <button onclick="closeTripDetailsModal()" class="w-full bg-primary hover:bg-blue-600 text-white py-2 rounded-xl font-bold transition-colors">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div id="messageModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center" style="z-index: 9999;">
+        <div class="bg-[#192633] rounded-2xl p-6 max-w-md w-full mx-4 border border-[#233648]">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white">Message <span id="messageDriverName" class="text-secondary">Driver</span></h3>
+                <button onclick="closeMessageModal()" class="text-[#92adc9] hover:text-white">
+                    <span class="material-symbols-outlined text-2xl">close</span>
+                </button>
+            </div>
+            <div id="messagesContainer" class="bg-[#151f2a] rounded-lg p-3 h-64 overflow-y-auto mb-3 space-y-2 border border-[#233648]">
+                <!-- Messages populated here -->
+            </div>
+            <div class="flex gap-2">
+                <input type="text" id="messageInput" placeholder="Type message..." class="flex-1 bg-[#151f2a] text-white placeholder-[#5a6b7c] px-3 py-2 rounded-lg border border-[#233648] focus:border-primary focus:outline-none" onkeypress="if(event.key==='Enter')sendMessage()">
+                <button onclick="sendMessage()" class="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold transition-colors">
+                    Send
+                </button>
+            </div>
+            <button onclick="closeMessageModal()" class="w-full bg-[#233648] hover:bg-[#2d465e] text-white py-2 rounded-xl font-bold transition-colors mt-3">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="fixed top-24 right-4 space-y-2 z-50"></div>
+
+    <!-- Scripts -->
+    <script src="api-client.js"></script>
+    <script src="auth-service.js"></script>
+    <script src="trip-service-api.js"></script>
+
+    <script>
+        let dashboardMap = null;
+        let pickerMap = null;
+        let mapMode = null; // Track whether map is for 'pickup' or 'destination'
+        let userLocation = null;
+        let pickupLocation = null; // Rider's desired pickup location (can be different from current location)
+        let destinationLocation = null;
+        let selectedRideForJoin = null;
+        let selectedMapLocation = null;
+        let destinationMarker = null;
+        let riderTripFare = 0; // Store the calculated fare based on rider's distance
+        let acceptedRides = []; // Store accepted rides for modal functions
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (!AuthService.isAuthenticated()) {
+                window.location.href = '/Login-Connected.html';
+                return;
+            }
+            populateProfileEmail();
+            await loadDashboard();
+        });
+
+        // Populate profile email in dropdown
+        function populateProfileEmail() {
+            const user = AuthService.getCurrentUser();
+            if (user) {
+                const profileEmailEl = document.getElementById('profileEmail');
+                if (profileEmailEl) {
+                    profileEmailEl.textContent = user.email || user.username || 'User';
+                }
+            }
+        }
+
+        // Profile dropdown toggle
+        document.addEventListener('DOMContentLoaded', () => {
+            const profileBtn = document.getElementById('profileBtn');
+            const profileDropdown = document.getElementById('profileDropdown');
+
+            if (profileBtn && profileDropdown) {
+                profileBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    profileDropdown.classList.toggle('hidden');
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+                        profileDropdown.classList.add('hidden');
+                    }
+                });
+            }
+        });
+
+        // Calculate distance between two coordinates using Haversine formula
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            console.log(`Calculating distance from (${lat1}, ${lon1}) to (${lat2}, ${lon2})`);
+            const R = 6371; // Earth's radius in km
+            const dLat = ((lat2 - lat1) * Math.PI) / 180;
+            const dLon = ((lon2 - lon1) * Math.PI) / 180;
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos((lat1 * Math.PI) / 180) *
+                    Math.cos((lat2 * Math.PI) / 180) *
+                    Math.sin(dLon / 2) *
+                    Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c;
+            console.log(`Calculated distance: ${distance.toFixed(2)} km`);
+            return distance;
+        }
+
+        async function loadDashboard() {
+            try {
+                const user = AuthService.getCurrentUser();
+                await getUserLocation();
+                await loadAcceptedRides();
+                initializeMap();
+                checkActiveTrip();
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showNotification('Error loading dashboard', 'error');
+            }
+        }
+
+        // Update pickup distances for all displayed rides based on driver's live location
+        function updatePickupDistances(driverLocations) {
+            if (!window.availableRides || window.availableRides.length === 0) return;
+
+            // For each displayed ride, update the pickup distance if driver location is available
+            window.availableRides.forEach(ride => {
+                if (driverLocations[ride._id]) {
+                    const driverLoc = driverLocations[ride._id];
+
+                    // Get rider's pickup point
+                    if (pickupLocation) {
+                        const distance = calculateDistance(
+                            driverLoc.lat,
+                            driverLoc.lng,
+                            pickupLocation.lat,
+                            pickupLocation.lng
+                        );
+                        ride.pickupDistance = parseFloat(distance.toFixed(2));
+                    }
+                }
+            });
+
+            // Re-render rides with updated distances
+            displayRides(window.availableRides);
+        }
+
+        async function getUserLocation() {
+            return new Promise((resolve) => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            userLocation = {
+                                lat: position.coords.latitude,
+                                lng: position.coords.longitude
+                            };
+                            document.getElementById('pickupInput').value = `📍 ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
+                            showNotification('✓ Location detected', 'success');
+                            resolve();
+                        },
+                        (error) => {
+                            console.error('Geolocation error:', error);
+                            resolve();
+                        }
+                    );
+                } else {
+                    console.warn('Geolocation not supported');
+                    showNotification('Geolocation unavailable', 'warning');
+                    resolve();
+                }
+            });
+        }
+
+        function useCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        pickupLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        document.getElementById('pickupInput').value = `📍 ${pickupLocation.lat.toFixed(4)}, ${pickupLocation.lng.toFixed(4)}`;
+                        console.log('[DEBUG] Pickup location set to current location:', pickupLocation);
+                        showNotification('✓ Pickup location updated', 'success');
+                    },
+                    (error) => {
+                        showNotification('Unable to get current location', 'error');
+                    }
+                );
+            }
+        }
+
+        function initializeMap() {
+            if (dashboardMap) dashboardMap.remove();
+
+            // Always center on user's current location
+            const mapCenter = [userLocation.lat, userLocation.lng];
+
+            dashboardMap = L.map('dashboardMap').setView(mapCenter, 15);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap',
+                maxZoom: 19
+            }).addTo(dashboardMap);
+
+            // Show pickup location marker if available
+            if (destinationLocation && destinationLocation.lat && destinationLocation.lng) {
+                L.circleMarker([destinationLocation.lat, destinationLocation.lng], {
+                    radius: 8,
+                    fillColor: '#00d26a',
+                    color: '#fff',
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(dashboardMap)
+                 .bindPopup('Pickup Location');
+            }
+
+            // Also show user's current location
+            L.circleMarker([userLocation.lat, userLocation.lng], {
+                radius: 6,
+                fillColor: '#10b981',
+                color: '#fff',
+                weight: 2,
+                opacity: 0.7,
+                fillOpacity: 0.6
+            }).addTo(dashboardMap)
+             .bindPopup('Your Location');
+        }
+
+        function openMapModal(mode) {
+            mapMode = mode; // Store the mode globally
+            document.getElementById('mapModal').classList.add('active');
+
+            setTimeout(() => {
+                if (pickerMap) pickerMap.remove();
+
+                pickerMap = L.map('pickerMap').setView([userLocation.lat, userLocation.lng], 15);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(pickerMap);
+
+                pickerMap.on('click', (e) => {
+                    selectedMapLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
+
+                    pickerMap.eachLayer((layer) => {
+                        if (layer instanceof L.Marker) {
+                            pickerMap.removeLayer(layer);
+                        }
+                    });
+
+                    L.marker([selectedMapLocation.lat, selectedMapLocation.lng])
+                        .addTo(pickerMap)
+                        .bindPopup('Selected')
+                        .openPopup();
+                });
+            }, 100);
+        }
+
+        function closeMapModal() {
+            document.getElementById('mapModal').classList.remove('active');
+            selectedMapLocation = null;
+        }
+
+        function confirmMapSelection() {
+            if (!selectedMapLocation) {
+                showNotification('Click on map to select location', 'warning');
+                return;
+            }
+
+            let mode = mapMode || 'destination'; // Use stored mode, default to destination
+            console.log('[DEBUG] Confirming map selection with mode:', mode);
+
+            if (mode === 'pickup') {
+                pickupLocation = {
+                    lat: selectedMapLocation.lat,
+                    lng: selectedMapLocation.lng
+                };
+                document.getElementById('pickupInput').value = `📍 ${pickupLocation.lat.toFixed(4)}, ${pickupLocation.lng.toFixed(4)}`;
+                console.log('[DEBUG] Pickup location set via map:', pickupLocation);
+                showNotification('✓ Pickup location set', 'success');
+            } else {
+                destinationLocation = {
+                    lat: selectedMapLocation.lat,
+                    lng: selectedMapLocation.lng
+                };
+                document.getElementById('destLat').value = selectedMapLocation.lat.toFixed(6);
+                document.getElementById('destLng').value = selectedMapLocation.lng.toFixed(6);
+                console.log('Destination updated to:', destinationLocation);
+
+                // Calculate and show preview of fare
+                const startLocation = pickupLocation || userLocation;
+                if (startLocation && destinationLocation) {
+                    const previewDistance = calculateDistance(
+                        startLocation.lat,
+                        startLocation.lng,
+                        destinationLocation.lat,
+                        destinationLocation.lng
+                    );
+                    const previewFare = Math.round(previewDistance * 10);
+                    console.log(`[DEBUG] Preview: ${previewDistance.toFixed(2)} km = ₹${previewFare}`);
+                    showNotification(`✓ Destination set (${previewDistance.toFixed(2)} km, ≈ ₹${previewFare})`, 'success');
+                } else {
+                    showNotification('✓ Destination set', 'success');
+                }
+            }
+
+            if (dashboardMap) {
+                // Remove old destination marker if it exists
+                if (destinationLocation && mode === 'destination' && destinationMarker) {
+                    dashboardMap.removeLayer(destinationMarker);
+                }
+
+                // Add new destination marker for destination mode
+                if (destinationLocation && mode === 'destination') {
+                    destinationMarker = L.circleMarker([destinationLocation.lat, destinationLocation.lng], {
+                        fillOpacity: 0.8,
+                        color: '#137fec',
+                        fillColor: '#137fec'
+                    }).addTo(dashboardMap).bindPopup('Destination');
+                }
+
+                // Fit bounds if both locations exist
+                if (userLocation && destinationLocation) {
+                    dashboardMap.fitBounds([
+                        [userLocation.lat, userLocation.lng],
+                        [destinationLocation.lat, destinationLocation.lng]
+                    ]);
+                }
+            }
+
+            closeMapModal();
+        }
+
+        async function searchRides() {
+            try {
+                if (!destinationLocation) {
+                    showNotification('Please set a destination first', 'warning');
+                    return;
+                }
+
+                const ridesList = document.getElementById('ridesList');
+                ridesList.innerHTML = '<div class="text-center py-8"><div class="loading-spinner mx-auto mb-2"></div><p class="text-[#92adc9]">Searching for rides...</p></div>';
+
+                // Calculate the distance between rider's pickup and dropoff
+                const riderDistance = calculateDistance(
+                    userLocation.lat,
+                    userLocation.lng,
+                    destinationLocation.lat,
+                    destinationLocation.lng
+                );
+
+                // Calculate fare based on distance: 1 KM = ₹10
+                riderTripFare = Math.round(riderDistance * 10);
+
+                console.log('Destination:', destinationLocation);
+                console.log('User Location:', userLocation);
+                console.log('Rider Distance Calculated:', riderDistance);
+                console.log('Rider Fare Calculated:', riderTripFare);
+                console.log('Search params:', {
+                    pickup: [userLocation.lng, userLocation.lat],
+                    dropoff: [destinationLocation.lng, destinationLocation.lat],
+                    riderDistance: riderDistance.toFixed(2),
+                    calculatedFare: riderTripFare
+                });
+
+                const response = await TripServiceAPI.findMatches(
+                    [userLocation.lng, userLocation.lat],
+                    [destinationLocation.lng, destinationLocation.lat]
+                );
+
+                console.log('Search response:', response);
+
+                if (response && response.matches && response.matches.length > 0) {
+                    console.log('Displaying rides with fare:', riderTripFare);
+                    displayRides(response.matches);
+                } else {
+                    ridesList.innerHTML = '<div class="text-center py-8 text-[#92adc9]"><span class="material-symbols-outlined text-4xl block mb-2 opacity-50">search_off</span><p>No matching rides found</p><p class="text-xs mt-2">Try a different destination or create a ride instead!</p></div>';
+                }
+            } catch (error) {
+                console.error('Error searching rides:', error);
+                showNotification('Error searching rides: ' + error.message, 'error');
+                document.getElementById('ridesList').innerHTML = '<p class="text-red-400 text-center py-4">Error loading rides. Check console for details.</p>';
+            }
+        }
+
+        function displayRides(rides) {
+            const ridesList = document.getElementById('ridesList');
+            document.getElementById('matchCount').textContent = rides.length + ' Found';
+
+            if (!rides || rides.length === 0) {
+                ridesList.innerHTML = '<div class="text-center py-8 text-[#92adc9]">No rides available</div>';
+                return;
+            }
+
+            // Store rides globally for real-time updates
+            window.availableRides = rides;
+
+            console.log('displayRides called with fare:', riderTripFare);
+            const currentUserId = AuthService.getCurrentUser()._id;
+            console.log('Current user ID:', currentUserId);
+
+            ridesList.innerHTML = rides.map((ride, index) => {
+                const fareAmount = riderTripFare || 0;
+
+                // Check if current user has already sent a request to this trip
+                let myRequest = null;
+                if (ride.riders && ride.riders.length > 0) {
+                    console.log('Ride riders:', ride.riders);
+                    myRequest = ride.riders.find(r => {
+                        const riderIdToCheck = r.riderId && r.riderId._id ? r.riderId._id : r.riderId;
+                        console.log('Comparing:', riderIdToCheck, 'with', currentUserId, 'equal:', riderIdToCheck === currentUserId || (typeof riderIdToCheck === 'object' && riderIdToCheck.toString() === currentUserId));
+                        return riderIdToCheck === currentUserId || (typeof riderIdToCheck === 'object' && riderIdToCheck.toString() === currentUserId);
+                    });
+                }
+                const hasRequestSent = !!myRequest;
+                const requestStatus = myRequest ? myRequest.status : null;
+
+                console.log('Rendering ride with fare:', fareAmount, 'hasRequest:', hasRequestSent, 'status:', requestStatus);
+
+                // Determine button display
+                let buttonHTML = '';
+                if (hasRequestSent) {
+                    // Show Already requested status with View and Cancel options
+                    buttonHTML = `
+                        <div class="mt-3">
+                            <div class="w-full bg-green-600/20 border border-green-600/50 text-green-400 text-sm font-bold h-9 rounded-full flex items-center justify-center mb-2">
+                                ✓ Already Requested
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="showDriverDetails('${ride._id}', '${ride.driver.firstName}', '${ride.driver.lastName}', ${ride.driver.rating}, '${ride.vehicle || 'Car'}', '${ride.driver.vehicleColor || 'N/A'}', '${ride.driver.vehicleNumber || 'N/A'}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold h-9 rounded-full transition-all">
+                                    Details
+                                </button>
+                                <button onclick="cancelJoinRequest('${ride._id}')" class="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-bold h-9 rounded-full transition-all">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Show Join Ride button
+                    buttonHTML = `
+                        <button onclick="openJoinRideModal('${ride._id}', '${ride.driver.firstName}', ${fareAmount}, ${ride.availableSeats}, ${ride.occupiedSeats}, ${ride.matchScore})" class="w-full mt-3 bg-primary hover:bg-blue-600 text-white text-sm font-bold h-9 rounded-full transition-all shadow-[0_2px_8px_rgba(19,127,236,0.4)]">
+                            Request to Join
+                        </button>
+                    `;
+                }
+
+                return `
+                <div class="ride-card bg-gradient-to-br from-[#192633] to-[#151f2a] p-4 rounded-2xl border ${index === 0 ? 'border-primary/30' : 'border-[#233648]'} ${hasRequestSent ? 'border-green-600/50' : ''} hover:border-[#384b5f] transition-all ${index === 0 ? 'shadow-[0_0_10px_rgba(19,127,236,0.5)]' : ''}">
+                    ${index === 0 ? '<div class="absolute -top-2 -right-2 bg-secondary text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Best Match</div>' : ''}
+                    ${hasRequestSent ? `<div class="absolute -top-2 left-2 bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Request Sent</div>` : ''}
+                    <div class="flex gap-4">
+                        <div class="relative">
+                            <div class="size-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-[#233648]">
+                                ${ride.driver.firstName.charAt(0)}${ride.driver.lastName.charAt(0)}
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start mb-1">
+                                <h4 class="text-white font-bold truncate">${ride.driver.firstName} ${ride.driver.lastName}</h4>
+                                <span class="text-primary font-bold text-sm">${ride.matchScore}% Match</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-xs text-[#92adc9] mb-3">
+                                <div class="flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">star</span>
+                                    <span>${ride.driver.rating || 5.0}</span>
+                                </div>
+                                <div class="w-1 h-1 rounded-full bg-[#233648]"></div>
+                                <div class="flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">directions_car</span>
+                                    <span>${ride.vehicle || 'Car'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-2 text-sm text-[#92adc9]">
+                        <div class="flex justify-between">
+                            <span>Pickup Distance:</span>
+                            <span class="text-white">${ride.pickupDistance !== undefined && ride.pickupDistance !== null ? (ride.pickupDistance === 0 ? 'Same Location' : ride.pickupDistance.toFixed(1) + ' km') : 'N/A'}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Your Fare:</span>
+                            <span class="text-secondary font-bold">₹${fareAmount > 0 ? fareAmount : 'N/A'}</span>
+                        </div>
+                    </div>
+                    ${buttonHTML}
+                </div>
+            `;
+            }).join('');
+        }
+
+        // Load accepted/active trips for the rider
+        async function loadAcceptedRides() {
+            try {
+                const response = await TripServiceAPI.getRiderTrips();
+                if (response && response.trips) {
+                    const acceptedTrips = response.trips.filter(trip => {
+                        const currentUserId = AuthService.getCurrentUser()._id;
+                        const riderData = trip.riders.find(r => {
+                            const riderIdToCheck = r.riderId && r.riderId._id ? r.riderId._id : r.riderId;
+                            return riderIdToCheck === currentUserId || (typeof riderIdToCheck === 'object' && riderIdToCheck.toString() === currentUserId);
+                        });
+                        // Only show active trips (matched, confirmed, ongoing) - exclude completed and cancelled
+                        return riderData && (riderData.status === 'matched' || riderData.status === 'confirmed' || riderData.status === 'ongoing') && trip.status !== 'completed' && trip.status !== 'cancelled';
+                    });
+                    displayAcceptedRides(acceptedTrips);
+                }
+            } catch (error) {
+                console.error('Error loading accepted rides:', error);
+            }
+        }
+
+        // Display accepted/active trips in the right column
+        function displayAcceptedRides(trips) {
+            acceptedRides = trips; // Store trips in global variable for modal functions
+            const acceptedList = document.getElementById('acceptedRidesList');
+            document.getElementById('acceptedCount').textContent = trips.length;
+
+            if (!trips || trips.length === 0) {
+                acceptedList.innerHTML = '<div class="text-center py-3 text-[#92adc9] text-xs"><span class="material-symbols-outlined text-2xl block mb-1 opacity-50">inbox</span>No accepted rides yet</div>';
+                return;
+            }
+
+            const currentUserId = AuthService.getCurrentUser()._id;
+            acceptedList.innerHTML = trips.map((trip, index) => {
+                const riderData = trip.riders.find(r => {
+                    const riderIdToCheck = r.riderId && r.riderId._id ? r.riderId._id : r.riderId;
+                    return riderIdToCheck === currentUserId || (typeof riderIdToCheck === 'object' && riderIdToCheck.toString() === currentUserId);
+                });
+                let statusBadgeColor = '';
+                let statusText = '';
+
+                if (riderData.status === 'matched') {
+                    statusBadgeColor = 'bg-yellow-600/30 text-yellow-400';
+                    statusText = 'Pending';
+                } else if (riderData.status === 'confirmed') {
+                    statusBadgeColor = 'bg-green-600/30 text-green-400';
+                    statusText = 'Accepted';
+                } else {
+                    statusBadgeColor = 'bg-blue-600/30 text-blue-400';
+                    statusText = 'Ongoing';
+                }
+
+                return `
+                <div class="bg-gradient-to-br from-[#192633] to-[#151f2a] p-2 rounded-lg border border-green-600/30 hover:border-green-600/60 transition-all">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <div class="size-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0">
+                                ${trip.driver.firstName.charAt(0)}${trip.driver.lastName.charAt(0)}
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-white font-bold text-xs truncate">${trip.driver.firstName} ${trip.driver.lastName}</p>
+                                <p class="text-[10px] text-[#92adc9]">★${trip.driver.rating || 5.0}</p>
+                            </div>
+                        </div>
+                        <span class="${statusBadgeColor} px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0">${statusText}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[10px] text-[#92adc9] mb-1 px-1">
+                        <span>Fare: <span class="text-secondary font-bold">₹${riderData.fare || 0}</span></span>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="showTripDetails('${trip._id}')" class="flex-1 bg-primary/20 hover:bg-primary/30 text-primary text-[9px] font-bold py-1 rounded transition-all">
+                            Details
+                        </button>
+                        ${riderData.status === 'confirmed' ? `
+                        <button onclick="showLiveTracking('${trip._id}', '${trip.driver.firstName}')" class="flex-1 bg-blue-600/30 hover:bg-blue-600/40 text-blue-400 text-[9px] font-bold py-1 rounded transition-all">
+                            Map
+                        </button>
+                        <button onclick="contactDriver('${trip._id}', '${trip.driver.firstName}')" class="flex-1 bg-secondary/20 hover:bg-secondary/30 text-secondary text-[9px] font-bold py-1 rounded transition-all">
+                            Message
+                        </button>` : ''}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // Tab switching function
+        function switchTab(tab) {
+            const availableTab = document.getElementById('availableTab');
+            const mytripsTab = document.getElementById('mytripsTab');
+            const availableRidesTab = document.getElementById('availableRidesTab');
+            const mytripsRidesTab = document.getElementById('mytripsRidesTab');
+
+            if (tab === 'available') {
+                availableTab.classList.remove('bg-[#233648]', 'text-[#92adc9]', 'hover:bg-[#2d465e]');
+                availableTab.classList.add('bg-primary', 'text-white');
+
+                mytripsTab.classList.remove('bg-primary', 'text-white');
+                mytripsTab.classList.add('bg-[#233648]', 'text-[#92adc9]', 'hover:bg-[#2d465e]');
+
+                availableRidesTab.classList.remove('hidden');
+                mytripsRidesTab.classList.add('hidden');
+            } else {
+                mytripsTab.classList.remove('bg-[#233648]', 'text-[#92adc9]', 'hover:bg-[#2d465e]');
+                mytripsTab.classList.add('bg-primary', 'text-white');
+
+                availableTab.classList.remove('bg-primary', 'text-white');
+                availableTab.classList.add('bg-[#233648]', 'text-[#92adc9]', 'hover:bg-[#2d465e]');
+
+                mytripsRidesTab.classList.remove('hidden');
+                availableRidesTab.classList.add('hidden');
+            }
+        }
+
+        // Show trip details
+        function showTripDetails(tripId) {
+            // Find the trip in the accepted rides
+            const trip = acceptedRides.find(t => t._id === tripId);
+            if (!trip) {
+                showNotification('Trip not found', 'error');
+                return;
+            }
+
+            // Get current user ID to find rider data
+            const currentUserId = AuthService.getCurrentUser()._id;
+            const riderData = trip.riders.find(r => {
+                const riderIdToCheck = r.riderId && r.riderId._id ? r.riderId._id : r.riderId;
+                return riderIdToCheck === currentUserId || (typeof riderIdToCheck === 'object' && riderIdToCheck.toString() === currentUserId);
+            });
+
+            // Format the trip details content
+            const pickupLocation = trip.pickupLocation || {};
+            const dropoffLocation = trip.dropoffLocation || {};
+            const tripStatus = trip.status || 'pending';
+            const driverName = trip.driver?.firstName && trip.driver?.lastName ? `${trip.driver.firstName} ${trip.driver.lastName}` : 'Unknown Driver';
+            const fare = riderData?.fare || trip.baseFare || '0';
+
+            let statusBadgeColor = 'bg-yellow-600';
+            if (tripStatus === 'completed') statusBadgeColor = 'bg-green-600';
+            else if (tripStatus === 'cancelled') statusBadgeColor = 'bg-red-600';
+            else if (tripStatus === 'in_progress') statusBadgeColor = 'bg-blue-600';
+
+            document.getElementById('tripDetailsContent').innerHTML = `
+                <div class="space-y-3">
+                    <div class="bg-[#151f2a] p-3 rounded-lg">
+                        <div class="text-[#92adc9] text-sm mb-1">Driver</div>
+                        <div class="text-white font-bold">${driverName}</div>
+                    </div>
+
+                    <div class="bg-[#151f2a] p-3 rounded-lg">
+                        <div class="text-[#92adc9] text-sm mb-1">Vehicle Type</div>
+                        <div class="text-white font-bold capitalize">${trip.driver?.vehicle || 'Not specified'}</div>
+                    </div>
+
+                    <div class="bg-[#151f2a] p-3 rounded-lg">
+                        <div class="text-[#92adc9] text-sm mb-1">Vehicle Number</div>
+                        <div class="text-white font-bold">${trip.driver?.vehicleNumber || 'Not specified'}</div>
+                    </div>
+
+                    <div class="bg-[#151f2a] p-3 rounded-lg">
+                        <div class="text-[#92adc9] text-sm mb-1">Your Fare</div>
+                        <div class="text-secondary font-bold text-lg">₹${fare}</div>
+                    </div>
+
+                    <div class="bg-[#151f2a] p-3 rounded-lg">
+                        <div class="text-[#92adc9] text-sm mb-1">Pickup</div>
+                        <div class="text-white text-sm">${pickupLocation.address || 'Loading...'}</div>
+                    </div>
+
+                    <div class="bg-[#151f2a] p-3 rounded-lg">
+                        <div class="text-[#92adc9] text-sm mb-1">Dropoff</div>
+                        <div class="text-white text-sm">${dropoffLocation.address || 'Loading...'}</div>
+                    </div>
+
+                    <div class="bg-[#151f2a] p-3 rounded-lg">
+                        <div class="text-[#92adc9] text-sm mb-1">Status</div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-white capitalize">${tripStatus.replace('_', ' ')}</span>
+                            <span class="${statusBadgeColor} text-white text-xs px-2 py-1 rounded-full capitalize">${tripStatus.replace('_', ' ')}</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#151f2a] p-3 rounded-lg">
+                        <div class="text-[#92adc9] text-sm mb-1">Distance</div>
+                        <div class="text-white font-bold">${calculateTripDistance(trip) || '0'} km</div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('tripDetailsModal').classList.remove('hidden');
+        }
+
+        function closeTripDetailsModal() {
+            document.getElementById('tripDetailsModal').classList.add('hidden');
+        }
+
+        // Contact driver via message
+        function contactDriver(tripId, driverName) {
+            const trip = acceptedRides.find(t => t._id === tripId);
+            if (!trip) {
+                showNotification('Trip not found', 'error');
+                return;
+            }
+
+            // Set the driver name in modal title
+            document.getElementById('messageDriverName').textContent = driverName;
+
+            // Store current trip and driver info for messaging
+            window.currentMessagingTrip = tripId;
+            // Get driver ID from the populated driver object
+            window.currentMessagingDriver = trip.driver && trip.driver._id ? trip.driver._id : trip.driver;
+            window.currentMessagingDriverName = driverName;
+
+            console.log('[DEBUG] Contact Driver - Trip:', tripId, 'Driver:', window.currentMessagingDriver, 'Driver Name:', driverName);
+
+            // Load message history
+            loadMessageHistory(tripId);
+
+            // Open message modal
+            document.getElementById('messageModal').classList.remove('hidden');
+        }
+
+        function closeMessageModal() {
+            document.getElementById('messageModal').classList.add('hidden');
+            document.getElementById('messageInput').value = '';
+            window.currentMessagingTrip = null;
+            window.currentMessagingDriver = null;
+        }
+
+        async function loadMessageHistory(tripId) {
+            try {
+                const messagesContainer = document.getElementById('messagesContainer');
+                messagesContainer.innerHTML = '<div class="text-[#92adc9] text-center py-4">Loading messages...</div>';
+
+                // Call API to get messages
+                const response = await fetch(`http://localhost:5001/api/messages/trip/${tripId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load messages');
+                }
+
+                const data = await response.json();
+                const messages = data.messages || [];
+
+                if (messages.length === 0) {
+                    messagesContainer.innerHTML = '<div class="text-[#92adc9] text-center py-4">No messages yet. Start a conversation!</div>';
+                } else {
+                    messagesContainer.innerHTML = messages.map(msg => `
+                        <div class="mb-3 ${msg.senderId === getCurrentUserId() ? 'text-right' : 'text-left'}">
+                            <div class="${msg.senderId === getCurrentUserId() ? 'bg-primary' : 'bg-[#151f2a]'} inline-block px-3 py-2 rounded-lg max-w-xs">
+                                <div class="text-white text-sm break-words">${msg.messageText}</div>
+                            </div>
+                            <div class="text-[#92adc9] text-xs mt-1">${new Date(msg.createdAt).toLocaleTimeString()}</div>
+                        </div>
+                    `).join('');
+
+                    // Scroll to bottom
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                if (error.message.includes('Failed to fetch') || error.message.includes('ERR_CONNECTION_REFUSED')) {
+                    document.getElementById('messagesContainer').innerHTML = '<div class="text-yellow-500 text-center py-4 text-xs">Backend server is not running. Please start the server.</div>';
+                } else {
+                    document.getElementById('messagesContainer').innerHTML = '<div class="text-red-500 text-center py-4">Failed to load messages. Please try again.</div>';
+                }
+            }
+        }
+
+        async function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+
+            if (!message) {
+                showNotification('Please enter a message', 'warning');
+                return;
+            }
+
+            console.log('[DEBUG] Send Message - Trip:', window.currentMessagingTrip, 'Driver:', window.currentMessagingDriver);
+
+            if (!window.currentMessagingTrip || !window.currentMessagingDriver) {
+                console.error('[ERROR] Missing messaging info - Trip:', window.currentMessagingTrip, 'Driver:', window.currentMessagingDriver);
+                showNotification('Error: Trip information missing. Please close and reopen the message', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:5001/api/messages/send', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        tripId: window.currentMessagingTrip,
+                        recipientId: window.currentMessagingDriver,
+                        messageText: message
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to send message');
+                }
+
+                // Clear input and reload messages
+                messageInput.value = '';
+                await loadMessageHistory(window.currentMessagingTrip);
+                showNotification('✓ Message sent!', 'success');
+            } catch (error) {
+                console.error('Error sending message:', error);
+                showNotification('Error sending message', 'error');
+            }
+        }
+
+        function getCurrentUserId() {
+            // Get user ID from stored user data or token
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    return user._id || user.id;
+                } catch (e) {
+                    console.error('Error parsing user:', e);
+                }
+            }
+            return null;
+        }
+
+        function showLiveTracking(tripId, driverName) {
+            // Find the trip
+            const trip = acceptedRides.find(t => t._id === tripId);
+            if (!trip) {
+                showNotification('Trip not found', 'error');
+                return;
+            }
+
+            // Get coordinates - START WITH DRIVER'S CURRENT LOCATION
+            let driverLat = null, driverLng = null;
+            let pickupLat = null, pickupLng = null, destLat = null, destLng = null;
+
+            // Get driver's current location from trip's currentLocation or from stored locations
+            if (trip.driver && trip.driver.currentLocation && trip.driver.currentLocation.coordinates) {
+                driverLng = trip.driver.currentLocation.coordinates[0];
+                driverLat = trip.driver.currentLocation.coordinates[1];
+            } else if (window.driverLocations && window.driverLocations[tripId]) {
+                driverLat = window.driverLocations[tripId].lat;
+                driverLng = window.driverLocations[tripId].lng;
+            }
+
+            // Fallback to pickup location if driver location not available
+            if (driverLat === null || driverLng === null) {
+                driverLat = trip.pickupLocation?.coordinates?.[1] || 30.836427;
+                driverLng = trip.pickupLocation?.coordinates?.[0] || 76.960320;
+            }
+
+            // Extract rider's pickup point (where driver picks up the rider)
+            // This comes from the rider's data in the trip
+            if (trip.riders && trip.riders.length > 0) {
+                const riderData = trip.riders[0];
+
+                // Try to get rider's pickup location
+                if (riderData.pickupPoint) {
+                    if (typeof riderData.pickupPoint === 'string') {
+                        try {
+                            const coords = JSON.parse(riderData.pickupPoint);
+                            pickupLat = coords.lat;
+                            pickupLng = coords.lng;
+                        } catch (e) {
+                            // Parsing failed, skip
+                        }
+                    } else if (riderData.pickupPoint.coordinates && Array.isArray(riderData.pickupPoint.coordinates)) {
+                        pickupLng = riderData.pickupPoint.coordinates[0];
+                        pickupLat = riderData.pickupPoint.coordinates[1];
+                    } else if (riderData.pickupPoint.coordinates?.coordinates && Array.isArray(riderData.pickupPoint.coordinates.coordinates)) {
+                        pickupLng = riderData.pickupPoint.coordinates.coordinates[0];
+                        pickupLat = riderData.pickupPoint.coordinates.coordinates[1];
+                    } else if (riderData.pickupPoint.lat && riderData.pickupPoint.lng) {
+                        pickupLat = riderData.pickupPoint.lat;
+                        pickupLng = riderData.pickupPoint.lng;
+                    }
+                }
+
+                // Try to get rider's destination (dropoff location)
+                if (destLat === null && (riderData.dropoffLocation || riderData.dropoffPoint)) {
+                    const dropoffData = riderData.dropoffLocation || riderData.dropoffPoint;
+                    if (typeof dropoffData === 'string') {
+                        try {
+                            const coords = JSON.parse(dropoffData);
+                            destLat = coords.lat;
+                            destLng = coords.lng;
+                        } catch (e) {
+                            // Parsing failed, skip
+                        }
+                    } else if (dropoffData.coordinates && Array.isArray(dropoffData.coordinates)) {
+                        destLng = dropoffData.coordinates[0];
+                        destLat = dropoffData.coordinates[1];
+                    } else if (dropoffData.coordinates?.coordinates && Array.isArray(dropoffData.coordinates.coordinates)) {
+                        destLng = dropoffData.coordinates.coordinates[0];
+                        destLat = dropoffData.coordinates.coordinates[1];
+                    } else if (dropoffData.lat && dropoffData.lng) {
+                        destLat = dropoffData.lat;
+                        destLng = dropoffData.lng;
+                    }
+                }
+            }
+
+            // Fallback: Try to extract from trip level fields if rider data doesn't have it
+            if (pickupLat === null && trip.pickupLocation?.coordinates && Array.isArray(trip.pickupLocation.coordinates)) {
+                pickupLng = trip.pickupLocation.coordinates[0];
+                pickupLat = trip.pickupLocation.coordinates[1];
+            } else if (pickupLat === null && trip.pickupLocation?.coordinates?.coordinates && Array.isArray(trip.pickupLocation.coordinates.coordinates)) {
+                pickupLng = trip.pickupLocation.coordinates.coordinates[0];
+                pickupLat = trip.pickupLocation.coordinates.coordinates[1];
+            }
+
+            if (destLat === null && trip.dropoffLocation?.coordinates && Array.isArray(trip.dropoffLocation.coordinates)) {
+                destLng = trip.dropoffLocation.coordinates[0];
+                destLat = trip.dropoffLocation.coordinates[1];
+            } else if (destLat === null && trip.dropoffLocation?.coordinates?.coordinates && Array.isArray(trip.dropoffLocation.coordinates.coordinates)) {
+                destLng = trip.dropoffLocation.coordinates.coordinates[0];
+                destLat = trip.dropoffLocation.coordinates.coordinates[1];
+            }
+
+            // Create tracking modal if it doesn't exist
+            if (!document.getElementById('liveTrackingModal')) {
+                const trackingModal = document.createElement('div');
+                trackingModal.id = 'liveTrackingModal';
+                trackingModal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center';
+                trackingModal.style.zIndex = '9999';
+                trackingModal.innerHTML = `
+                    <div class="bg-[#192633] rounded-2xl p-6 max-w-2xl w-full mx-4 border border-[#233648] max-h-[90vh] overflow-y-auto">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-bold text-white">📍 Live Tracking - ${driverName}</h3>
+                            <button onclick="closeLiveTracking()" class="text-[#92adc9] hover:text-white">
+                                <span class="material-symbols-outlined text-2xl">close</span>
+                            </button>
+                        </div>
+                        <div id="liveMapContainer" style="height: 500px; border-radius: 12px; overflow: hidden; border: 1px solid #233648;"></div>
+                        <div class="mt-4 flex gap-3">
+                            <div class="flex-1 bg-[#151f2a] p-3 rounded-lg text-center">
+                                <div class="text-[#92adc9] text-xs mb-1">Driver Status</div>
+                                <div class="text-green-400 font-bold">🟢 Live</div>
+                            </div>
+                            <div class="flex-1 bg-[#151f2a] p-3 rounded-lg text-center">
+                                <div class="text-[#92adc9] text-xs mb-1">Distance to Driver</div>
+                                <div id="distanceToDriver" class="text-primary font-bold">Calculating...</div>
+                            </div>
+                        </div>
+                        <button onclick="closeLiveTracking()" class="w-full mt-4 bg-[#233648] hover:bg-[#2d465e] text-white py-2 rounded-xl font-bold transition-colors">
+                            Close
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(trackingModal);
+            }
+
+            const modal = document.getElementById('liveTrackingModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+
+            // Initialize map
+            setTimeout(() => {
+                // Clear and remove old map instance
+                if (window.liveTrackingMap) {
+                    window.liveTrackingMap.remove();
+                    window.liveTrackingMap = null;
+                }
+
+                // Clear the container
+                const mapContainer = document.getElementById('liveMapContainer');
+                if (mapContainer) {
+                    mapContainer.innerHTML = '';
+                }
+
+                // Center between rider and driver
+                const centerLat = (driverLat + (pickupLat || driverLat)) / 2;
+                const centerLng = (driverLng + (pickupLng || driverLng)) / 2;
+
+                window.liveTrackingMap = L.map('liveMapContainer').setView([centerLat, centerLng], 13);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap',
+                    maxZoom: 19
+                }).addTo(window.liveTrackingMap);
+
+                // Add driver marker (green - live)
+                window.driverMarker = L.marker([driverLat, driverLng], {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    })
+                }).addTo(window.liveTrackingMap).bindPopup('<div class="font-bold">🚗 Driver<br/>Live Location</div>').openPopup();
+
+                // Add pickup marker (blue)
+                if (pickupLat !== null && pickupLng !== null) {
+                    L.marker([pickupLat, pickupLng], {
+                        icon: L.icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41]
+                        })
+                    }).addTo(window.liveTrackingMap).bindPopup('<div class="font-bold">📍 Your Pickup Point</div>');
+                }
+
+                // Add destination marker (red)
+                if (destLat !== null && destLng !== null) {
+                    L.marker([destLat, destLng], {
+                        icon: L.icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41]
+                        })
+                    }).addTo(window.liveTrackingMap).bindPopup('<div class="font-bold">🏁 Destination</div>');
+                }
+
+                // Draw route line
+                const routePoints = [[driverLat, driverLng]];
+                if (pickupLat !== null && pickupLng !== null) routePoints.push([pickupLat, pickupLng]);
+                if (destLat !== null && destLng !== null) routePoints.push([destLat, destLng]);
+
+                if (routePoints.length > 1) {
+                    L.polyline(routePoints, {
+                        color: 'green',
+                        weight: 2,
+                        opacity: 0.7,
+                        dashArray: '5, 5'
+                    }).addTo(window.liveTrackingMap);
+                }
+
+                // Calculate and display distance to driver
+                if (pickupLat !== null && pickupLng !== null) {
+                    const distToDriver = calculateDistance(driverLat, driverLng, pickupLat, pickupLng);
+                    document.getElementById('distanceToDriver').textContent = `${distToDriver.toFixed(1)} km away`;
+                } else {
+                    document.getElementById('distanceToDriver').textContent = 'Pickup location not set';
+                }
+
+                // Store current trip ID for live tracking
+                window.currentTrackingTripId = tripId;
+
+                // Listen for real-time driver location updates
+                const updateDriverMarker = () => {
+                    if (window.driverLocations && window.driverLocations[tripId]) {
+                        const newLocation = window.driverLocations[tripId];
+
+                        // Update driver marker position
+                        if (window.driverMarker) {
+                            window.driverMarker.setLatLng([newLocation.lat, newLocation.lng]);
+                        }
+
+                        // Update distance
+                        if (pickupLat !== null && pickupLng !== null) {
+                            const distToDriver = calculateDistance(newLocation.lat, newLocation.lng, pickupLat, pickupLng);
+                            const distanceElement = document.getElementById('distanceToDriver');
+                            if (distanceElement) {
+                                distanceElement.textContent = `${distToDriver.toFixed(1)} km away`;
+                            }
+                        }
+
+                        // Pan map to keep driver marker visible
+                        if (window.liveTrackingMap) {
+                            const centerLat = (newLocation.lat + (pickupLat || newLocation.lat)) / 2;
+                            const centerLng = (newLocation.lng + (pickupLng || newLocation.lng)) / 2;
+                            window.liveTrackingMap.panTo([centerLat, centerLng]);
+                        }
+                    }
+                };
+
+                // Check for updates every 2 seconds
+                window.liveTrackingInterval = setInterval(updateDriverMarker, 2000);
+
+                // Store the update function for cleanup
+                window.liveTrackingUpdateFunc = updateDriverMarker;
+            }, 100);
+        }
+
+        function closeLiveTracking() {
+            const modal = document.getElementById('liveTrackingModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            if (window.liveTrackingInterval) {
+                clearInterval(window.liveTrackingInterval);
+            }
+            if (window.liveTrackingMap) {
+                window.liveTrackingMap.remove();
+                window.liveTrackingMap = null;
+            }
+        }
+
+        function openJoinRideModal(rideId, driverName, baseFare, availableSeats, occupiedSeats, matchScore) {
+            selectedRideForJoin = rideId;
+
+            document.getElementById('joinRideContent').innerHTML = `
+                <div class="bg-[#151f2a] p-3 rounded-xl space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-[#92adc9]">Driver:</span>
+                        <span class="text-white font-bold">${driverName}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[#92adc9]">Match Score:</span>
+                        <span class="text-primary font-bold">${matchScore}%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[#92adc9]">Your Fare:</span>
+                        <span class="text-secondary font-bold">₹${riderTripFare}</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('joinRideModal').classList.remove('hidden');
+        }
+
+        function closeJoinModal() {
+            document.getElementById('joinRideModal').classList.add('hidden');
+            selectedRideForJoin = null;
+        }
+
+        async function confirmJoinRide() {
+            try {
+                if (!selectedRideForJoin) {
+                    showNotification('Error: Ride not selected', 'error');
+                    return;
+                }
+
+                // Use pickupLocation (rider's desired pickup point), fallback to current location
+                const pickupPoint = pickupLocation || userLocation;
+                if (!pickupPoint) {
+                    showNotification('Please set a pickup location', 'error');
+                    return;
+                }
+
+                console.log('[DEBUG] Joining trip with pickup:', pickupPoint, 'destination:', destinationLocation);
+
+                const response = await TripServiceAPI.joinTrip(
+                    selectedRideForJoin,
+                    [pickupPoint.lng, pickupPoint.lat],
+                    [destinationLocation.lng, destinationLocation.lat],
+                    riderTripFare
+                );
+
+                if (response && response.success) {
+                    showNotification('✓ Request sent! Waiting for driver approval...', 'success');
+                    closeJoinModal();
+                    await loadAcceptedRides(); // Refresh accepted rides list
+                    setTimeout(() => {
+                        searchRides();
+                    }, 2000);
+                } else {
+                    showNotification('Error joining ride', 'error');
+                }
+            } catch (error) {
+                console.error('Error joining ride:', error);
+                showNotification('Error joining ride', 'error');
+            }
+        }
+
+        function calculateTripDistance(trip) {
+            try {
+                if (trip.distance) return trip.distance.toFixed(2);
+
+                // Calculate from coordinates if available
+                let pickupLat, pickupLng, dropoffLat, dropoffLng;
+
+                // Extract pickup coordinates
+                if (trip.pickupLocation?.coordinates) {
+                    if (Array.isArray(trip.pickupLocation.coordinates)) {
+                        pickupLng = trip.pickupLocation.coordinates[0];
+                        pickupLat = trip.pickupLocation.coordinates[1];
+                    }
+                }
+
+                // Extract dropoff coordinates
+                if (trip.dropoffLocation?.coordinates) {
+                    if (Array.isArray(trip.dropoffLocation.coordinates)) {
+                        dropoffLng = trip.dropoffLocation.coordinates[0];
+                        dropoffLat = trip.dropoffLocation.coordinates[1];
+                    }
+                }
+
+                // Calculate distance if we have both coordinates
+                if (pickupLat && pickupLng && dropoffLat && dropoffLng) {
+                    return calculateDistance(pickupLat, pickupLng, dropoffLat, dropoffLng).toFixed(2);
+                }
+
+                return '0';
+            } catch (error) {
+                console.error('Error calculating trip distance:', error);
+                return '0';
+            }
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = ((lat2 - lat1) * Math.PI) / 180;
+            const dLon = ((lon2 - lon1) * Math.PI) / 180;
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos((lat1 * Math.PI) / 180) *
+                    Math.cos((lat2 * Math.PI) / 180) *
+                    Math.sin(dLon / 2) *
+                    Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function checkActiveTrip() {
+            const activeTrip = localStorage.getItem('activeTrip');
+            if (activeTrip) {
+                showNotification('You have an active trip! Go to Offer a Ride to view it.', 'info');
+            }
+        }
+
+        function refreshMap() {
+            initializeMap();
+            showNotification('✓ Map refreshed', 'success');
+        }
+
+        function zoomIn() {
+            if (dashboardMap) dashboardMap.zoomIn();
+        }
+
+        function zoomOut() {
+            if (dashboardMap) dashboardMap.zoomOut();
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                AuthService.logout();
+            }
+        }
+
+        function showNotification(message, type = 'success') {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+
+            const bgColor = {
+                'success': 'bg-secondary',
+                'error': 'bg-red-600',
+                'info': 'bg-primary',
+                'warning': 'bg-yellow-600'
+            }[type] || 'bg-gray-600';
+
+            notification.className = `${bgColor} text-white p-4 rounded-lg shadow-lg max-w-sm flex items-center gap-2`;
+            notification.innerHTML = `
+                <span class="material-symbols-outlined text-[20px]">${type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info'}</span>
+                <span>${message}</span>
+            `;
+
+            container.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Show driver details modal
+        function showDriverDetails(rideId, firstName, lastName, rating, vehicle, vehicleColor, vehicleNumber) {
+            const driverDetailsContent = document.getElementById('driverDetailsContent');
+            driverDetailsContent.innerHTML = `
+                <div class="bg-[#151f2a] p-4 rounded-xl space-y-3">
+                    <div class="flex items-center justify-center mb-4">
+                        <div class="size-16 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-2xl">
+                            ${firstName.charAt(0)}${lastName.charAt(0)}
+                        </div>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[#92adc9]">Name:</span>
+                        <span class="text-white font-bold">${firstName} ${lastName}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[#92adc9]">Rating:</span>
+                        <div class="flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[14px] text-yellow-400">star</span>
+                            <span class="text-white font-bold">${rating}</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[#92adc9]">Vehicle:</span>
+                        <span class="text-white font-bold">${vehicle}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[#92adc9]">Vehicle Color:</span>
+                        <span class="text-white font-bold">${vehicleColor}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-[#92adc9]">Vehicle Number:</span>
+                        <span class="text-white font-bold">${vehicleNumber}</span>
+                    </div>
+                </div>
+            `;
+            document.getElementById('driverDetailsModal').classList.remove('hidden');
+        }
+
+        function closeDriverDetailsModal() {
+            document.getElementById('driverDetailsModal').classList.add('hidden');
+        }
+
+        // Show driver location on map
+        function showDriverLocation(rideId, driverLat, driverLng) {
+            const mapElement = document.getElementById('driverLocationMap');
+            mapElement.innerHTML = ''; // Clear previous map
+
+            // Initialize Leaflet map
+            const driverLocationMap = L.map(mapElement).setView([driverLat, driverLng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(driverLocationMap);
+
+            // Add driver marker
+            const driverMarker = L.marker([driverLat, driverLng], {
+                icon: L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                })
+            }).addTo(driverLocationMap);
+
+            driverMarker.bindPopup('<strong>Driver Location</strong>').openPopup();
+
+            // Add rider location if available
+            if (userLocation && userLocation.lat && userLocation.lng) {
+                const riderMarker = L.marker([userLocation.lat, userLocation.lng], {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    })
+                }).addTo(driverLocationMap);
+
+                riderMarker.bindPopup('<strong>Your Location</strong>');
+            }
+
+            // Fit bounds to show both markers
+            setTimeout(() => {
+                driverLocationMap.invalidateSize();
+            }, 100);
+
+            document.getElementById('driverLocationModal').classList.remove('hidden');
+        }
+
+        function closeDriverLocationModal() {
+            document.getElementById('driverLocationModal').classList.add('hidden');
+        }
+
+        // Cancel join request
+        async function cancelJoinRequest(rideId) {
+            if (!confirm('Are you sure you want to cancel this request?')) {
+                return;
+            }
+
+            try {
+                const response = await apiClient.delete(`/trips/${rideId}/cancel-rider`, {
+                    riderId: AuthService.getCurrentUser()._id
+                });
+
+                if (response && response.success) {
+                    showNotification('✓ Request cancelled successfully', 'success');
+                    await loadAcceptedRides(); // Refresh accepted rides
+                    setTimeout(() => {
+                        searchRides();
+                    }, 1500);
+                } else {
+                    showNotification('Error cancelling request', 'error');
+                }
+            } catch (error) {
+                console.error('Error cancelling request:', error);
+                showNotification('Error cancelling request', 'error');
+            }
+        }
+
+        // Socket.io setup for real-time updates
+        function setupSocketListeners() {
+            // Connect to Socket.io server
+            const token = apiClient.getToken();
+            const socket = io('http://localhost:5001', {
+                auth: {
+                    token: token
+                }
+            });
+            
+            // Store socket globally so it can be accessed by other functions (like live tracking)
+            window.riderSocket = socket;
+
+            // Join user room for personal notifications (for trip-completed events)
+            const user = AuthService.getCurrentUser();
+            if (user && user._id) {
+                socket.emit('join-user-room', { userId: user._id });
+                console.log('[DEBUG] Joined user room:', user._id);
+            }
+
+            // Listen for ride acceptance notifications
+            socket.on('notification', async (data) => {
+                console.log('Notification received:', data);
+                if (data.type === 'ride-accepted') {
+                    showNotification('✓ ' + data.message, 'success');
+                    // Reload accepted rides
+                    await loadAcceptedRides();
+                    // Remove from available rides if showing
+                    const rideCard = document.querySelector(`[data-ride-id="${data.tripId}"]`);
+                    if (rideCard) {
+                        rideCard.remove();
+                    }
+                } else if (data.type === 'ride-rejected') {
+                    showNotification('❌ ' + data.message, 'error');
+                    // Remove from available rides if showing
+                    const rideCard = document.querySelector(`[data-ride-id="${data.tripId}"]`);
+                    if (rideCard) {
+                        rideCard.remove();
+                    }
+                    // Remove from accepted rides if showing
+                    await loadAcceptedRides();
+                } else if (data.type === 'new-message') {
+                    // Show notification for new message
+                    showNotification(`📨 New message from ${data.senderName}`, 'info');
+                    // If conversation is open, refresh messages
+                    if (window.currentMessagingTrip && data.tripId === window.currentMessagingTrip) {
+                        await loadMessageHistory(window.currentMessagingTrip);
+                    }
+                }
+            });
+
+            // Listen for trip completion
+            socket.on('trip-completed', async (data) => {
+                console.log('Trip completed event received:', data);
+                showNotification('✓ Trip completed by driver', 'success');
+                // Refresh accepted rides to remove completed trip
+                await loadAcceptedRides();
+            });
+
+            // Listen for new messages in real-time
+            socket.on('new-message', async (data) => {
+                console.log('New message received:', data);
+                // If the message is for the current open conversation, refresh messages
+                if (window.currentMessagingTrip && data.tripId === window.currentMessagingTrip) {
+                    await loadMessageHistory(window.currentMessagingTrip);
+                }
+            });
+
+            // Listen for driver location updates (real-time)
+            socket.on('driver-location-update', (data) => {
+                console.log('[DEBUG] Driver location update received:', data);
+                // data format: { tripId, driverId, lat, lng, timestamp }
+                if (!window.driverLocations) {
+                    window.driverLocations = {};
+                }
+                // Store driver location indexed by tripId
+                window.driverLocations[data.tripId] = {
+                    lat: data.lat,
+                    lng: data.lng,
+                    timestamp: data.timestamp
+                };
+
+                // Update pickup distances for displayed rides
+                updatePickupDistances(window.driverLocations);
+            });
+
+            socket.on('connect', () => {
+                console.log('Socket.io connected');
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Socket.io disconnected');
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Socket.io connection error:', error);
+            });
+        }
+
+        // Initialize Socket.io on page load
+        window.addEventListener('load', () => {
+            // Check if Socket.io library is available
+            if (typeof io !== 'undefined') {
+                setupSocketListeners();
+            } else {
+                console.warn('Socket.io library not loaded, real-time updates disabled');
+            }
+        });
+    </script>
+</body>
+</html>
