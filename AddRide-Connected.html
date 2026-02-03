@@ -613,35 +613,60 @@
         async function loadActiveTrip() {
             try {
                 console.log('[DEBUG] loadActiveTrip called');
-                
-                // PRIMARY: Fetch from backend database
+
+                // PRIMARY: Fetch from backend database using TripServiceAPI
                 try {
-                    console.log('[DEBUG] Fetching driver trips from backend...');
-                    const response = await apiClient.get('/trips/driver/my-trips');
+                    console.log('[DEBUG] Fetching driver trips from backend via TripServiceAPI...');
+                    const response = await TripServiceAPI.getDriverTrips();
                     
+                    console.log('[DEBUG] API Response:', response);
+                    console.log('[DEBUG] Response.success:', response?.success);
+                    console.log('[DEBUG] Response.trips:', response?.trips);
+                    console.log('[DEBUG] Trips length:', response?.trips?.length);
+
                     if (response && response.success && response.trips && response.trips.length > 0) {
-                        // Find the active trip (status = 'active')
-                        const activeTrip = response.trips.find(trip => trip.status === 'active');
+                        console.log('[DEBUG] All trips from API:', response.trips);
+                        console.log('[DEBUG] Trip statuses:', response.trips.map(t => ({ id: t._id, status: t.status })));
                         
+                        // Find the active trip (status = 'active')
+                        const activeTrip = response.trips.find(trip => {
+                            console.log('[DEBUG] Checking trip - ID:', trip._id, 'Status:', trip.status);
+                            return trip.status === 'active';
+                        });
+
                         if (activeTrip) {
                             console.log('[DEBUG] ✅ Active trip found in database:', activeTrip._id);
                             // Update localStorage with latest trip ID
                             localStorage.setItem('activeTrip', activeTrip._id);
                             localStorage.setItem('activeTripCode', activeTrip.tripCode);
-                            
+
                             // Load the trip
+                            console.log('[DEBUG] Loading trip details for ID:', activeTrip._id);
                             await loadTripDetails(activeTrip._id);
                             return;
                         } else {
-                            console.log('[DEBUG] No active trip found in database');
+                            console.log('[DEBUG] ❌ No active trip found. Total trips:', response.trips.length);
+                            response.trips.forEach((t, i) => {
+                                console.log(`[DEBUG] Trip ${i}: ID=${t._id}, Status=${t.status}`);
+                            });
                             localStorage.removeItem('activeTrip');
                             localStorage.removeItem('activeTripCode');
                         }
+                    } else {
+                        console.log('[DEBUG] Response validation failed:', {
+                            hasResponse: !!response,
+                            success: response?.success,
+                            hasTrips: !!response?.trips,
+                            tripLength: response?.trips?.length
+                        });
                     }
                 } catch (dbError) {
-                    console.log('[DEBUG] Error fetching from database, falling back to localStorage:', dbError.message);
+                    console.error('[ERROR] Error fetching from database:', dbError);
+                    console.log('[DEBUG] Error type:', dbError.constructor.name);
+                    console.log('[DEBUG] Error message:', dbError.message);
+                    console.log('[DEBUG] Falling back to localStorage...');
                 }
-                
+
                 // FALLBACK: Check localStorage
                 const activeTripId = localStorage.getItem('activeTrip');
                 console.log('[DEBUG] Checking localStorage, activeTrip:', activeTripId);
@@ -652,8 +677,9 @@
                 }
 
                 // Load trip from localStorage ID
+                console.log('[DEBUG] Loading trip from localStorage ID:', activeTripId);
                 await loadTripDetails(activeTripId);
-                
+
             } catch (error) {
                 console.error('[ERROR] loadActiveTrip failed:', error);
             }
