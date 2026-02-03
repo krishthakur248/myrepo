@@ -271,7 +271,7 @@
                 if (response.success) {
                     showNotification('✓ Login successful! Redirecting...', 'success');
                     setTimeout(() => {
-                        window.location.href = '/Dashboard-Connected.html';
+                        window.location.href = './Dashboard-Connected.html';
                     }, 1000);
                 }
             } catch (error) {
@@ -308,7 +308,7 @@
                 if (response.success) {
                     showNotification('✓ Account created! Redirecting...', 'success');
                     setTimeout(() => {
-                        window.location.href = '/Dashboard-Connected.html';
+                        window.location.href = './Dashboard-Connected.html';
                     }, 1000);
                 }
             } catch (error) {
@@ -322,7 +322,7 @@
 
         // Check if already logged in
         if (AuthService.isAuthenticated()) {
-            window.location.href = '/Dashboard-Connected.html';
+            window.location.href = './Dashboard-Connected.html';
         }
     </script>
 </body>

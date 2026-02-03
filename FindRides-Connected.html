@@ -232,7 +232,7 @@
         // Check authentication
         window.addEventListener('DOMContentLoaded', async () => {
             if (!AuthService.isAuthenticated()) {
-                window.location.href = '/Login-Connected.html';
+                window.location.href = './Login-Connected.html';
                 return;
             }
         });
@@ -448,7 +448,7 @@
                     showNotification('✓ Request sent! Waiting for driver approval...', 'success');
                     closeModal();
                     setTimeout(() => {
-                        window.location.href = 'Dashboard.html';
+                        window.location.href = './Dashboard.html';
                     }, 2000);
                 }
             } catch (error) {

@@ -357,7 +357,7 @@
         // Check authentication on page load
         window.addEventListener('DOMContentLoaded', async () => {
             if (!AuthService.isAuthenticated()) {
-                window.location.href = '/Login-Connected.html';
+                window.location.href = './Login-Connected.html';
                 return;
             }
 
@@ -1297,7 +1297,7 @@
 
         // Go to dashboard
         function goToDashboard() {
-            window.location.href = '/Dashboard.html';
+            window.location.href = './Dashboard.html';
         }
 
         // Logout

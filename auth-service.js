@@ -50,7 +50,7 @@ class AuthService {
   static logout() {
     apiClient.clearToken();
     localStorage.removeItem('user');
-    window.location.href = '/Login-Connected.html';
+    window.location.href = './Login-Connected.html';
   }
 
   // Get current user
@@ -135,7 +135,7 @@ class AuthService {
 // Redirect to login if not authenticated
 function requireAuth() {
   if (!AuthService.isAuthenticated()) {
-    window.location.href = '/Login.html';
+    window.location.href = './Login.html';
     return false;
   }
   return true;
