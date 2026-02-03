@@ -1794,12 +1794,12 @@
         function setupSocketListeners() {
             // Connect to Socket.io server
             const token = apiClient.getToken();
-            const socket = io('http://localhost:5001', {
+            const socket = io('https://myrepo-7dfw.onrender.com', {
                 auth: {
                     token: token
                 }
             });
-            
+
             // Store socket globally so it can be accessed by other functions (like live tracking)
             window.riderSocket = socket;
 

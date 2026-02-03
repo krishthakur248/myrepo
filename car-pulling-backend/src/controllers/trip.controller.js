@@ -546,13 +546,24 @@ exports.completeTrip = async (req, res) => {
         const userId = req.user.id;
         const { tripId, finalRoute } = req.body;
 
+        console.log('🔍 [COMPLETE-TRIP] Request received:');
+        console.log('   - User ID from token:', userId, 'Type:', typeof userId);
+        console.log('   - Trip ID:', tripId);
+
         const trip = await Trip.findById(tripId);
         if (!trip) {
             return res.status(404).json({ success: false, message: 'Trip not found' });
         }
 
+        console.log('🔍 [COMPLETE-TRIP] Trip found:');
+        console.log('   - Trip driver:', trip.driver, 'Type:', typeof trip.driver);
+        console.log('   - Trip driver toString():', trip.driver.toString());
+        console.log('   - User ID:', userId);
+        console.log('   - Match result:', trip.driver.toString() === userId);
+
         // Verify user is the driver
         if (trip.driver.toString() !== userId) {
+            console.warn('❌ [COMPLETE-TRIP] Authorization failed - user is not the driver');
             return res.status(403).json({
                 success: false,
                 message: 'Only the driver can complete a trip'

@@ -388,7 +388,7 @@
         function setupSocketListeners() {
             // Use a small delay to ensure NotificationManager socket is initialized
             setTimeout(() => {
-                const socket = io('http://localhost:5001', {
+                const socket = io('https://myrepo-7dfw.onrender.com', {
                     auth: {
                         token: apiClient.getToken()
                     }
@@ -1086,6 +1086,14 @@
                     return;
                 }
 
+                // **DEBUG: Log information before attempting to complete**
+                console.log('[COMPLETE-TRIP] Attempting to complete trip:', activeTripId);
+                console.log('[COMPLETE-TRIP] Current user:', AuthService.getCurrentUser());
+                console.log('[COMPLETE-TRIP] Token present:', !!apiClient.getToken());
+
+                // Call debug function for detailed info
+                await window.debugTripCompletion();
+
                 await TripServiceAPI.completeTrip(activeTripId, []);
 
                 // **NEW: Stop location tracking when trip ends**
@@ -1609,6 +1617,46 @@
                 showNotification('Error rejecting request', 'error');
             }
         }
+
+        // **DEBUG FUNCTION** - Add this to check trip/user matching
+        async function debugTripCompletion() {
+            const token = apiClient.getToken();
+            const activeTripId = localStorage.getItem('activeTrip');
+
+            // Decode JWT to get user ID
+            let userId = null;
+            if (token) {
+                try {
+                    const decoded = JSON.parse(atob(token.split('.')[1]));
+                    userId = decoded.id;
+                } catch (e) {
+                    console.error('Failed to decode token:', e);
+                }
+            }
+
+            console.log('=== TRIP COMPLETION DEBUG INFO ===');
+            console.log('Token:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+            console.log('User ID from token:', userId);
+            console.log('Active Trip ID:', activeTripId);
+            console.log('Current User:', AuthService.getCurrentUser());
+
+            // If we have an active trip, fetch it to see the driver
+            if (activeTripId) {
+                try {
+                    const tripResponse = await apiClient.get(`/trips/${activeTripId}`);
+                    if (tripResponse.success && tripResponse.trip) {
+                        console.log('Trip Driver ID:', tripResponse.trip.driver);
+                        console.log('User ID matches Driver ID:', userId === tripResponse.trip.driver);
+                    }
+                } catch (error) {
+                    console.error('Error fetching trip:', error);
+                }
+            }
+            console.log('====================================');
+        }
+
+        // Call debug function before completing trip
+        window.debugTripCompletion = debugTripCompletion;
     </script>
 </body>
 </html>

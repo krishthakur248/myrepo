@@ -1,6 +1,6 @@
 // API Client - Handles all HTTP requests
 class APIClient {
-  constructor(baseURL = 'http://localhost:5001/api') {
+  constructor(baseURL = 'https://myrepo-7dfw.onrender.com/api') {
     this.baseURL = baseURL;
   }
 
@@ -153,4 +153,4 @@ class APIClient {
 }
 
 // Create global API client instance
-const apiClient = new APIClient('http://localhost:5001/api');
+const apiClient = new APIClient('https://myrepo-7dfw.onrender.com/api');

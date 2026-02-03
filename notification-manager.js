@@ -9,7 +9,7 @@ class NotificationManager {
         if (this.socket) return; // Already initialized
 
         // Connect to Socket.io server
-        const socketUrl = 'http://localhost:5001';
+        const socketUrl = 'https://myrepo-7dfw.onrender.com';
 
         // Using Socket.io client library (added via CDN)
         if (typeof io !== 'undefined') {
