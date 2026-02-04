@@ -106,7 +106,7 @@ console.log('Match:', user._id === "697ef50422ed48959a43659a");
 
 ### Issue 1: "Trips length: 0"
 **Problem:** API returns empty array
-**Fix:** 
+**Fix:**
 - Check if you're logged in as the driver
 - Verify the driver ID matches
 
@@ -146,7 +146,7 @@ Filter for status === 'active'
 If found:
   ✅ Load trip details
   ✅ Show active trip section
-  
+
 If not found:
   ❌ Clear localStorage
   ❌ Show form

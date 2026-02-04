@@ -110,24 +110,31 @@ class LocationService {
   static async updateLocationInBackend(latitude, longitude) {
     try {
       const response = await AuthService.updateLocation(latitude, longitude);
-      console.log('Location updated:', response);
+      console.log('[LOCATION] Location updated in backend:', response);
 
-      // Emit location update via Socket.io for real-time distance calculation on rider screens
-      if (window.socket && window.socket.connected) {
+      // Emit location update via Socket.io for real-time tracking
+      // Try both window.socket (riders) and window.driverSocket (drivers)
+      const socket = window.driverSocket || window.socket;
+
+      if (socket && socket.connected) {
         const activeTripId = localStorage.getItem('activeTrip');
         if (activeTripId) {
-          window.socket.emit('update-location', {
+          // For drivers: emit 'update-location' event which should be broadcast to riders
+          socket.emit('update-location', {
             tripId: activeTripId,
             latitude,
             longitude,
+            timestamp: new Date().getTime()
           });
-          console.log('[LOCATION] Emitted location update via Socket.io:', { tripId: activeTripId, latitude, longitude });
+          console.log('[LOCATION] ✅ Emitted location update via Socket.io:', { tripId: activeTripId, latitude, longitude });
         }
+      } else {
+        console.warn('[LOCATION] ⚠️ Socket.io not connected, location update will be fetched via API fallback');
       }
 
       return response;
     } catch (error) {
-      console.error('Error updating location:', error);
+      console.error('[LOCATION] ❌ Error updating location:', error);
     }
   }
 

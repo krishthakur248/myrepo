@@ -618,7 +618,7 @@
                 try {
                     console.log('[DEBUG] Fetching driver trips from backend via TripServiceAPI...');
                     const response = await TripServiceAPI.getDriverTrips();
-                    
+
                     console.log('[DEBUG] API Response:', response);
                     console.log('[DEBUG] Response.success:', response?.success);
                     console.log('[DEBUG] Response.trips:', response?.trips);
@@ -627,7 +627,7 @@
                     if (response && response.success && response.trips && response.trips.length > 0) {
                         console.log('[DEBUG] All trips from API:', response.trips);
                         console.log('[DEBUG] Trip statuses:', response.trips.map(t => ({ id: t._id, status: t.status })));
-                        
+
                         // Find the active trip (status = 'active')
                         const activeTrip = response.trips.find(trip => {
                             console.log('[DEBUG] Checking trip - ID:', trip._id, 'Status:', trip.status);
@@ -718,6 +718,15 @@
                     // **NEW: Start location tracking for driver to send real-time location to riders**
                     LocationService.startLocationTracking();
                     console.log('[DEBUG] Location tracking started for active trip');
+
+                    // **FIX: Ensure Socket.io listeners are re-attached after page reload**
+                    // Check if driver socket exists and is connected, if not call setupSocketListeners
+                    if (!window.driverSocket || !window.driverSocket.connected) {
+                        console.log('[DEBUG] Driver socket not connected, calling setupSocketListeners()');
+                        setupSocketListeners();
+                    } else {
+                        console.log('[DEBUG] Driver socket already connected');
+                    }
 
                     // Show active trip section and hide form
                     document.getElementById('tripForm').classList.add('hidden');
@@ -1109,19 +1118,45 @@
                     });
                     window.riderMapDriverMarker.addTo(window.riderMapInstance);
 
-                    // Set up real-time driver location updates
-                    window.riderMapUpdateInterval = setInterval(() => {
-                        // Get latest trip data - driver location might have been updated via socket
-                        if (window.currentActiveTrip && window.currentActiveTrip.driver && window.currentActiveTrip.driver.currentLocation) {
-                            const newDriverLat = window.currentActiveTrip.driver.currentLocation.coordinates[1];
-                            const newDriverLng = window.currentActiveTrip.driver.currentLocation.coordinates[0];
+                    // Set up real-time driver location updates with fallback to API
+                    window.riderMapUpdateInterval = setInterval(async () => {
+                        let updatedLat = null;
+                        let updatedLng = null;
+                        let updateSource = 'none';
 
-                            // Update driver marker
-                            if (window.riderMapDriverMarker) {
-                                window.riderMapDriverMarker.setLatLng([newDriverLat, newDriverLng]);
+                        // PRIMARY: Get from currentActiveTrip object (updated via socket.io)
+                        if (window.currentActiveTrip && window.currentActiveTrip.driver && window.currentActiveTrip.driver.currentLocation) {
+                            updatedLat = window.currentActiveTrip.driver.currentLocation.coordinates[1];
+                            updatedLng = window.currentActiveTrip.driver.currentLocation.coordinates[0];
+                            updateSource = 'socket.io';
+                            console.log('[DRIVER-MAP] Location from socket.io:', { updatedLat, updatedLng });
+                        }
+                        // FALLBACK: Fetch from API if socket data is not available
+                        else if (window.currentActiveTrip) {
+                            try {
+                                const tripResponse = await TripServiceAPI.getTripDetails(window.currentActiveTrip._id);
+                                if (tripResponse && tripResponse.trip && tripResponse.trip.driver && tripResponse.trip.driver.currentLocation) {
+                                    const coords = tripResponse.trip.driver.currentLocation.coordinates;
+                                    updatedLat = coords[1];
+                                    updatedLng = coords[0];
+                                    updateSource = 'api-fallback';
+                                    console.log('[DRIVER-MAP] Location from API fallback:', { updatedLat, updatedLng });
+                                    // Update local trip object for next time
+                                    window.currentActiveTrip.driver.currentLocation = tripResponse.trip.driver.currentLocation;
+                                }
+                            } catch (error) {
+                                console.warn('[DRIVER-MAP] Error fetching location from API:', error);
                             }
                         }
-                    }, 1000); // Update every 1 second
+
+                        // Update driver marker if we have new coordinates
+                        if (updatedLat !== null && updatedLng !== null && !isNaN(updatedLat) && !isNaN(updatedLng)) {
+                            if (window.riderMapDriverMarker) {
+                                window.riderMapDriverMarker.setLatLng([updatedLat, updatedLng]);
+                                console.log('[DRIVER-MAP] Marker updated from', updateSource);
+                            }
+                        }
+                    }, 1000); // Update every 1 second instead of being dependent on socket events
                 }
             }, 100);
         }

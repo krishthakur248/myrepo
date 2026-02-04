@@ -43,6 +43,22 @@ class NotificationManager {
                 this.handleNewRiderRequest(data);
             });
 
+            // Listen for driver location updates (real-time)
+            this.socket.on('driver-location-update', (data) => {
+                console.log('[LOCATION] Driver location update received via NotificationManager socket:', data);
+                // Store in global window object for map updates
+                if (!window.driverLocations) {
+                    window.driverLocations = {};
+                }
+                window.driverLocations[data.tripId] = {
+                    lat: data.lat,
+                    lng: data.lng,
+                    timestamp: data.timestamp,
+                    driverId: data.driverId
+                };
+                console.log('[LOCATION] Stored in window.driverLocations:', window.driverLocations[data.tripId]);
+            });
+
             // Handle connection events
             this.socket.on('connect', () => {
                 console.log('✓ Connected to notification server');

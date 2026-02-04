@@ -909,6 +909,18 @@
                         // Only show active trips (matched, confirmed, ongoing) - exclude completed and cancelled
                         return riderData && (riderData.status === 'matched' || riderData.status === 'confirmed' || riderData.status === 'ongoing') && trip.status !== 'completed' && trip.status !== 'cancelled';
                     });
+
+                    // **FIX: Rejoin trip rooms for location updates after page reload**
+                    if (acceptedTrips && acceptedTrips.length > 0) {
+                        console.log('[DEBUG] Rejoining trip rooms for', acceptedTrips.length, 'accepted trips');
+                        for (const trip of acceptedTrips) {
+                            if (NotificationManager && NotificationManager.joinTripRoom) {
+                                NotificationManager.joinTripRoom(trip._id);
+                                console.log('[DEBUG] Rejoined trip room for trip:', trip._id);
+                            }
+                        }
+                    }
+
                     displayAcceptedRides(acceptedTrips);
                 }
             } catch (error) {
@@ -1452,11 +1464,41 @@
                 // Store current trip ID for live tracking
                 window.currentTrackingTripId = tripId;
 
-                // Listen for real-time driver location updates
-                const updateDriverMarker = () => {
-                    if (window.driverLocations && window.driverLocations[tripId]) {
-                        const newLocation = window.driverLocations[tripId];
+                // Listen for real-time driver location updates with fallback polling
+                const updateDriverMarker = async () => {
+                    let newLocation = null;
+                    let updateSource = 'unknown';
 
+                    // PRIMARY: Check socket.io received location (real-time from backend)
+                    if (window.driverLocations && window.driverLocations[tripId]) {
+                        newLocation = window.driverLocations[tripId];
+                        updateSource = 'socket.io';
+                        console.log('[LOCATION] Driver location from socket.io:', newLocation);
+                    }
+                    // FALLBACK: Fetch from backend API if socket data is stale/missing
+                    else {
+                        try {
+                            const tripResponse = await TripServiceAPI.getTripDetails(tripId);
+                            if (tripResponse && tripResponse.trip && tripResponse.trip.driver && tripResponse.trip.driver.currentLocation) {
+                                const coords = tripResponse.trip.driver.currentLocation.coordinates;
+                                newLocation = {
+                                    lat: coords[1],
+                                    lng: coords[0],
+                                    timestamp: new Date().getTime()
+                                };
+                                updateSource = 'backend-api';
+                                console.log('[LOCATION] Driver location from backend API:', newLocation);
+                                // Cache it for next time
+                                if (!window.driverLocations) window.driverLocations = {};
+                                window.driverLocations[tripId] = newLocation;
+                            }
+                        } catch (error) {
+                            console.warn('[LOCATION] Error fetching from API:', error);
+                        }
+                    }
+
+                    // Update UI if we have a location
+                    if (newLocation && newLocation.lat && newLocation.lng) {
                         // Update driver marker position
                         if (window.driverMarker) {
                             window.driverMarker.setLatLng([newLocation.lat, newLocation.lng]);
@@ -1477,11 +1519,16 @@
                             const centerLng = (newLocation.lng + (pickupLng || newLocation.lng)) / 2;
                             window.liveTrackingMap.panTo([centerLat, centerLng]);
                         }
+
+                        console.log('[LOCATION] Driver marker updated from', updateSource);
+                    } else {
+                        console.log('[LOCATION] No location available (socket.io or API)');
                     }
                 };
 
-                // Check for updates every 2 seconds
-                window.liveTrackingInterval = setInterval(updateDriverMarker, 2000);
+                // Check for updates every 1 second (faster than 2 seconds)
+                // Combined approach: socket.io for real-time, API fallback for reliability
+                window.liveTrackingInterval = setInterval(updateDriverMarker, 1000);
 
                 // Store the update function for cleanup
                 window.liveTrackingUpdateFunc = updateDriverMarker;
@@ -1555,6 +1602,14 @@
 
                 if (response && response.success) {
                     showNotification('✓ Request sent! Waiting for driver approval...', 'success');
+
+                    // **FIX: Join Socket.io trip room to receive real-time location updates**
+                    console.log('[DEBUG] Rider joining trip room:', selectedRideForJoin);
+                    if (NotificationManager && NotificationManager.joinTripRoom) {
+                        NotificationManager.joinTripRoom(selectedRideForJoin);
+                        console.log('[DEBUG] Rider successfully joined trip room for location updates');
+                    }
+
                     closeJoinModal();
                     await loadAcceptedRides(); // Refresh accepted rides list
                     setTimeout(() => {
@@ -1860,7 +1915,7 @@
 
             // Listen for driver location updates (real-time)
             socket.on('driver-location-update', (data) => {
-                console.log('[DEBUG] Driver location update received:', data);
+                console.log('[LOCATION] ✅ Driver location update received from socket.io:', data);
                 // data format: { tripId, driverId, lat, lng, timestamp }
                 if (!window.driverLocations) {
                     window.driverLocations = {};
@@ -1871,21 +1926,28 @@
                     lng: data.lng,
                     timestamp: data.timestamp
                 };
+                console.log('[LOCATION] Stored in window.driverLocations:', window.driverLocations[data.tripId]);
 
                 // Update pickup distances for displayed rides
                 updatePickupDistances(window.driverLocations);
             });
 
             socket.on('connect', () => {
-                console.log('Socket.io connected');
+                console.log('[SOCKET] ✅ Socket.io connected with ID:', socket.id);
             });
 
             socket.on('disconnect', () => {
-                console.log('Socket.io disconnected');
+                console.log('[SOCKET] ⚠️ Socket.io disconnected');
             });
 
             socket.on('connect_error', (error) => {
-                console.error('Socket.io connection error:', error);
+                console.error('[SOCKET] ❌ Socket.io connection error:', error);
+            });
+
+            // Test: Request location update on connection
+            socket.on('connect', () => {
+                console.log('[SOCKET] Requesting initial driver location broadcasts...');
+                socket.emit('request-location-update');
             });
         }
 
