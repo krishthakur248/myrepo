@@ -72,7 +72,7 @@
             border-color: #137fec;
         }
         .profile-dropdown {
-            z-index: 999999 !important;
+            z-index: 9999 !important;
             position: fixed !important;
         }
         .map-modal {
@@ -155,7 +155,7 @@
 <body class="bg-background-dark text-white font-display overflow-hidden h-screen flex flex-col">
 
     <!-- Top Navigation -->
-    <header class="h-16 border-b border-[#233648] bg-[#111a22] flex items-center justify-between px-4 sm:px-6 z-20 shrink-0">
+    <header class="h-16 border-b border-[#233648] bg-[#111a22] flex items-center justify-between px-4 sm:px-6 z-40 shrink-0">
         <div class="flex items-center gap-3 text-white">
             <div class="size-8 bg-primary/20 rounded-full flex items-center justify-center text-primary">
                 <span class="material-symbols-outlined">share_location</span>
@@ -174,7 +174,7 @@
             </button>
 
             <!-- Profile Dropdown Button -->
-            <div class="relative">
+            <div class="relative z-50">
                 <button id="profileBtn" class="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-full hover:bg-[#233648] transition-colors z-10 relative">
                     <span class="material-symbols-outlined text-[24px]">account_circle</span>
                     <span class="material-symbols-outlined text-[16px] hidden sm:inline">arrow_drop_down</span>
