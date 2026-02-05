@@ -418,6 +418,18 @@
                     console.log('[DEBUG] Driver joined user room:', user._id);
                 }
 
+                // Join trip room if active trip exists
+                const activeTripId = localStorage.getItem('activeTrip');
+                if (activeTripId) {
+                    socket.emit('join-trip-room', { tripId: activeTripId });
+                    console.log('[DEBUG] Driver joined trip room via driverSocket:', activeTripId);
+                }
+
+                // Listen for socket connection
+                socket.on('connect', () => {
+                    console.log('[DEBUG] Driver socket connected, ID:', socket.id);
+                });
+
                 // Listen for new messages in real-time
                 socket.on('new-message', async (data) => {
                     console.log('[DEBUG] Driver received new message:', data);
@@ -728,11 +740,7 @@
                     // Join trip room for real-time notifications
                     NotificationManager.joinTripRoom(trip._id);
 
-                    // **NEW: Start location tracking for driver to send real-time location to riders**
-                    LocationService.startLocationTracking();
-                    console.log('[DEBUG] Location tracking started for active trip');
-
-                    // **FIX: Ensure Socket.io listeners are re-attached after page reload**
+                    // **FIX: Ensure Socket.io listeners are re-attached BEFORE starting location tracking**
                     // Check if driver socket exists and is connected, if not call setupSocketListeners
                     if (!window.driverSocket || !window.driverSocket.connected) {
                         console.log('[DEBUG] Driver socket not connected, calling setupSocketListeners()');
@@ -740,6 +748,13 @@
                     } else {
                         console.log('[DEBUG] Driver socket already connected');
                     }
+
+                    // Wait a moment for socket to establish before starting location tracking
+                    setTimeout(() => {
+                        // **NEW: Start location tracking for driver to send real-time location to riders**
+                        LocationService.startLocationTracking();
+                        console.log('[DEBUG] Location tracking started for active trip');
+                    }, 500);
 
                     // Show active trip section and hide form
                     document.getElementById('tripForm').classList.add('hidden');

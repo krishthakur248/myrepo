@@ -115,9 +115,11 @@ class LocationService {
       // Emit location update via Socket.io for real-time tracking
       // Try both window.socket (riders) and window.driverSocket (drivers)
       const socket = window.driverSocket || window.socket;
+      const activeTripId = localStorage.getItem('activeTrip');
+
+      console.log('[LOCATION] Socket check - Socket exists:', !!socket, 'Connected:', socket?.connected, 'TripID:', activeTripId);
 
       if (socket && socket.connected) {
-        const activeTripId = localStorage.getItem('activeTrip');
         if (activeTripId) {
           // For drivers: emit 'update-location' event which the backend will broadcast as 'driver-location-update' to all riders
           socket.emit('update-location', {
@@ -127,9 +129,11 @@ class LocationService {
             timestamp: new Date().getTime()
           });
           console.log('[LOCATION] ✅ Emitted location update via Socket.io:', { tripId: activeTripId, latitude, longitude });
+        } else {
+          console.warn('[LOCATION] ⚠️ No active trip ID in localStorage');
         }
       } else {
-        console.warn('[LOCATION] ⚠️ Socket.io not connected, location update will be fetched via API fallback');
+        console.warn('[LOCATION] ⚠️ Socket.io not connected. Socket:', socket, 'Connected:', socket?.connected);
       }
 
       return response;
