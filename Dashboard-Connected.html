@@ -519,6 +519,8 @@
                 return;
             }
             populateProfileEmail();
+            // Initialize NotificationManager socket for real-time updates
+            NotificationManager.initializeSocket();
             await loadDashboard();
         });
 

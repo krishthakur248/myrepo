@@ -1063,23 +1063,6 @@
                     maxZoom: 19
                 }).addTo(window.riderMapInstance);
 
-                // Add driver marker (green) - ONLY if driver location is valid
-                if (driverLat !== null && driverLng !== null && !isNaN(driverLat) && !isNaN(driverLng)) {
-                    L.marker([driverLat, driverLng], {
-                        icon: L.icon({
-                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                            iconSize: [25, 41],
-                            iconAnchor: [12, 41],
-                            popupAnchor: [1, -34],
-                            shadowSize: [41, 41]
-                        })
-                    }).addTo(window.riderMapInstance).bindPopup('<div class="font-bold">🚗 Driver<br/>Live Location</div>');
-                    console.log(`✅ Driver marker added: Lat=${driverLat}, Lng=${driverLng}`);
-                } else {
-                    console.warn('⚠️ Driver marker NOT added - location unavailable');
-                }
-
                 // Add rider pickup marker (blue) - This is where the rider wants to be picked up
                 L.marker([riderLat, riderLng], {
                     icon: L.icon({
