@@ -1564,7 +1564,8 @@
 
                     // Update UI if we have a location
                     if (newLocation && newLocation.lat && newLocation.lng) {
-                        // Update driver marker position
+                        // Don't pan the map on every update - just update the marker position
+                        // This keeps the map stationary while the marker moves smoothly
                         if (window.driverMarker) {
                             window.driverMarker.setLatLng([newLocation.lat, newLocation.lng]);
                         }
@@ -1576,13 +1577,6 @@
                             if (distanceElement) {
                                 distanceElement.textContent = `${distToDriver.toFixed(1)} km away`;
                             }
-                        }
-
-                        // Pan map to keep driver marker visible
-                        if (window.liveTrackingMap) {
-                            const centerLat = (newLocation.lat + (pickupLat || newLocation.lat)) / 2;
-                            const centerLng = (newLocation.lng + (pickupLng || newLocation.lng)) / 2;
-                            window.liveTrackingMap.panTo([centerLat, centerLng]);
                         }
 
                         console.log('[LOCATION] Driver marker updated from', updateSource);

@@ -877,14 +877,14 @@
                 if (riderStatus === 'confirmed') {
                     // Accepted rider - show message button, map button, and status badge
                     actionButtonsHTML = `
-                        <div class="flex items-center gap-3">
-                            <span class="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-bold border-2 border-green-400 flex items-center gap-2">
+                        <div class="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:gap-3 sm:items-center">
+                            <span class="px-3 sm:px-4 py-2 bg-green-100 text-green-700 rounded-full text-xs sm:text-sm font-bold border-2 border-green-400 flex items-center justify-center gap-2 whitespace-nowrap sm:w-auto">
                                 <i class="fas fa-check-circle"></i>Accepted
                             </span>
-                            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium" onclick="showRiderMap('${rider._id}', ${pickupCoords.lat}, ${pickupCoords.lng}, ${dropoffCoords.lat}, ${dropoffCoords.lng}, '${riderName}')">
+                            <button class="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium flex-1 whitespace-nowrap" onclick="showRiderMap('${rider._id}', ${pickupCoords.lat}, ${pickupCoords.lng}, ${dropoffCoords.lat}, ${dropoffCoords.lng}, '${riderName}')">
                                 <i class="fas fa-map-location-dot mr-1"></i>Map
                             </button>
-                            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium" onclick="openChat('${riderId}', '${riderName}', '${tripId}')">
+                            <button class="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium flex-1 whitespace-nowrap" onclick="openChat('${riderId}', '${riderName}', '${tripId}')">
                                 <i class="fas fa-comments mr-1"></i>Message
                             </button>
                         </div>
@@ -893,13 +893,13 @@
                     // Pending rider - show distance, map, accept, and reject buttons
                     actionButtonsHTML = `
                         <div class="flex gap-2 flex-wrap">
-                            <button class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium" onclick="showRiderMap('${rider._id}', ${pickupCoords.lat}, ${pickupCoords.lng}, ${dropoffCoords.lat}, ${dropoffCoords.lng}, '${riderName}')">
+                            <button class="flex-1 min-w-max px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium" onclick="showRiderMap('${rider._id}', ${pickupCoords.lat}, ${pickupCoords.lng}, ${dropoffCoords.lat}, ${dropoffCoords.lng}, '${riderName}')">
                                 <i class="fas fa-map mr-1"></i>Map
                             </button>
-                            <button class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium" onclick="acceptRiderRequest('${riderId}', '${riderName}', '${tripId}')">
+                            <button class="flex-1 min-w-max px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs sm:text-sm font-medium" onclick="acceptRiderRequest('${riderId}', '${riderName}', '${tripId}')">
                                 <i class="fas fa-check mr-1"></i>Accept
                             </button>
-                            <button class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium" onclick="rejectRiderRequest('${riderId}', '${riderName}', '${tripId}')">
+                            <button class="flex-1 min-w-max px-2 sm:px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs sm:text-sm font-medium" onclick="rejectRiderRequest('${riderId}', '${riderName}', '${tripId}')">
                                 <i class="fas fa-times mr-1"></i>Reject
                             </button>
                         </div>
@@ -907,10 +907,10 @@
                 }
 
                 return `
-                <div class="bg-blue-50 border-2 border-blue-200 p-4 rounded-lg flex justify-between items-center transition-all duration-300 ${riderStatus === 'confirmed' ? 'border-green-400 bg-green-50' : ''}">
-                    <div>
-                        <h4 class="font-bold text-gray-900">${riderName}</h4>
-                        <p class="text-sm text-gray-600 mt-1">Fare: ₹${rider.fare || 'TBD'}</p>
+                <div class="bg-blue-50 border-2 border-blue-200 p-3 sm:p-4 rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 transition-all duration-300 ${riderStatus === 'confirmed' ? 'border-green-400 bg-green-50' : ''}">
+                    <div class="min-w-0">
+                        <h4 class="font-bold text-sm sm:text-base text-gray-900">${riderName}</h4>
+                        <p class="text-xs sm:text-sm text-gray-600 mt-1">Fare: ₹${rider.fare || 'TBD'}</p>
                     </div>
                     ${actionButtonsHTML}
                 </div>

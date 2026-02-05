@@ -119,7 +119,7 @@ class LocationService {
       if (socket && socket.connected) {
         const activeTripId = localStorage.getItem('activeTrip');
         if (activeTripId) {
-          // For drivers: emit 'update-location' event which should be broadcast to riders
+          // For drivers: emit 'update-location' event which the backend will broadcast as 'driver-location-update' to all riders
           socket.emit('update-location', {
             tripId: activeTripId,
             latitude,
