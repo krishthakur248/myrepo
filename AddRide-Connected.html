@@ -1011,9 +1011,9 @@
                 mapModal.innerHTML = `
                     <div class="bg-white rounded-lg shadow-2xl w-11/12 h-5/6 flex flex-col">
                         <div class="flex justify-between items-center p-4 border-b">
-                            <h2 class="text-xl font-bold">Trip Route Map - ${riderName}</h2>
-                            <div class="text-xs text-gray-600">
-                                🚗 Driver | 📍 Pickup: ${riderLat.toFixed(4)}, ${riderLng.toFixed(4)} | 🏁 Destination: ${destLat.toFixed(4)}, ${destLng.toFixed(4)}
+                            <h2 class="text-xl font-bold" id="riderMapTitle">Trip Route Map</h2>
+                            <div class="text-xs text-gray-600" id="riderMapCoords">
+                                🚗 Driver | 📍 Pickup | 🏁 Destination
                             </div>
                             <button onclick="closeRiderMap()" class="text-gray-500 hover:text-gray-700">
                                 <i class="fas fa-times text-2xl"></i>
@@ -1024,6 +1024,14 @@
                 `;
                 document.body.appendChild(mapModal);
             }
+
+            // Update modal title and coordinates for this specific rider
+            document.getElementById('riderMapTitle').textContent = `Trip Route Map - ${riderName}`;
+            document.getElementById('riderMapCoords').innerHTML = `🚗 Driver | 📍 Pickup: ${riderLat.toFixed(4)}, ${riderLng.toFixed(4)} | 🏁 Destination: ${destLat.toFixed(4)}, ${destLng.toFixed(4)}`;
+
+            // Clear the map container of old content
+            const mapContainer = document.getElementById('riderMapContainer');
+            mapContainer.innerHTML = '';
 
             document.getElementById('riderMapModal').classList.remove('hidden');
             document.getElementById('riderMapModal').style.display = 'flex';
