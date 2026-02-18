@@ -583,7 +583,8 @@
 
       /* Navbar: hide links, show hamburger */
       .nav-links { display: none; }
-      .nav-cta   { display: none; }
+      .nav-cta:not(#navDashboardBtnMobile) { display: none; }
+      #navDashboardBtnMobile { margin-left: auto; margin-right: 8px; }
       .hamburger { display: flex; }
       #navbar { padding: 12px 20px; top: 10px; left: 10px; right: 10px; }
 
@@ -711,6 +712,7 @@
       <button class="nav-pill"        id="nav-contact"  onclick="document.getElementById('contact')?.scrollIntoView({behavior:'smooth'})">Contact</button>
     </div>
     <button class="nav-cta" id="navDashboardBtn" onclick="location.href='./Dashboard-Connected.html'" style="display:none">Dashboard</button>
+    <button class="nav-cta" id="navDashboardBtnMobile" onclick="location.href='./Dashboard-Connected.html'" style="display:none; padding:6px 12px; font-size:.7rem; border-radius:20px">Dashboard</button>
     <button class="nav-cta" id="navGetAppBtn">Get App</button>
     <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -1319,6 +1321,7 @@
 
         // Show Dashboard button, hide Get App button
         document.getElementById('navDashboardBtn').style.display = '';
+        document.getElementById('navDashboardBtnMobile').style.display = '';
         document.getElementById('navGetAppBtn').style.display = 'none';
       } else {
         // Show login/signup form
@@ -1326,6 +1329,7 @@
 
         // Hide Dashboard button, show Get App button
         document.getElementById('navDashboardBtn').style.display = 'none';
+        document.getElementById('navDashboardBtnMobile').style.display = 'none';
         document.getElementById('navGetAppBtn').style.display = '';
       }
 
