@@ -52,19 +52,21 @@
       border-radius: 50px;
       border: 1px solid rgba(255,255,255,0.12);
       box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      pointer-events: auto;
     }
     .nav-logo {
       display: flex; align-items: center; gap: 9px;
       cursor: pointer; text-decoration: none;
       font-size: 1.2rem; font-weight: 800; color: #fff; letter-spacing: -0.3px;
+      pointer-events: auto;
     }
     .nav-logo span { color: #e02020; }
-    .nav-links { display: flex; gap: 4px; }
+    .nav-links { display: flex; gap: 4px; pointer-events: auto; }
     .nav-pill {
       background: rgba(255,255,255,0.08); color: #fff; border: none;
       padding: 8px 18px; border-radius: 30px; font-weight: 600;
       font-size: .88rem; cursor: pointer; font-family: inherit;
-      transition: all .2s;
+      transition: all .2s; pointer-events: auto;
     }
     .nav-pill:hover { background: rgba(255,255,255,0.15); }
     .nav-pill.active { background: rgba(224,32,32,0.85); }
@@ -72,7 +74,7 @@
       background: #e02020; color: #fff; border: none;
       padding: 10px 24px; border-radius: 28px; font-weight: 700;
       font-size: .88rem; cursor: pointer; font-family: inherit;
-      box-shadow: 0 4px 14px rgba(224,32,32,0.4); transition: transform .2s;
+      box-shadow: 0 4px 14px rgba(224,32,32,0.4); transition: transform .2s; pointer-events: auto;
     }
     .nav-cta:hover { transform: scale(1.05); }
 
@@ -688,10 +690,10 @@
 
   <!-- Mobile Menu Drawer -->
   <div class="mobile-menu" id="mobile-menu">
-    <button class="nav-pill active" id="mnav-home"     onclick="mobileNav('home')">Home</button>
-    <button class="nav-pill"        id="mnav-features" onclick="mobileNav('features')">Features</button>
-    <button class="nav-pill"        id="mnav-about"    onclick="mobileNav('about')">About</button>
-    <button class="nav-pill"        id="mnav-contact"  onclick="mobileNav('contact')">Contact</button>
+    <button class="nav-pill active" id="mnav-home"     onclick="closeMenu(); window.scrollTo({top:0,behavior:'smooth'})">Home</button>
+    <button class="nav-pill"        id="mnav-features" onclick="closeMenu(); document.getElementById('features')?.scrollIntoView({behavior:'smooth'})">Features</button>
+    <button class="nav-pill"        id="mnav-about"    onclick="closeMenu(); document.getElementById('about')?.scrollIntoView({behavior:'smooth'})">About</button>
+    <button class="nav-pill"        id="mnav-contact"  onclick="closeMenu(); document.getElementById('contact')?.scrollIntoView({behavior:'smooth'})">Contact</button>
     <button class="nav-cta"         onclick="closeMenu()">Get App</button>
   </div>
 
@@ -700,10 +702,10 @@
       Quick<span>Pull</span>
     </a>
     <div class="nav-links">
-      <button class="nav-pill active" id="nav-home"     onclick="scrollTo('home')">Home</button>
-      <button class="nav-pill"        id="nav-features" onclick="scrollTo('features')">Features</button>
-      <button class="nav-pill"        id="nav-about"    onclick="scrollTo('about')">About</button>
-      <button class="nav-pill"        id="nav-contact"  onclick="scrollTo('contact')">Contact</button>
+      <button class="nav-pill active" id="nav-home"     onclick="window.scrollTo({top:0,behavior:'smooth'}); this.setAttribute('aria-current','true');">Home</button>
+      <button class="nav-pill"        id="nav-features" onclick="document.getElementById('features')?.scrollIntoView({behavior:'smooth'})">Features</button>
+      <button class="nav-pill"        id="nav-about"    onclick="document.getElementById('about')?.scrollIntoView({behavior:'smooth'})">About</button>
+      <button class="nav-pill"        id="nav-contact"  onclick="document.getElementById('contact')?.scrollIntoView({behavior:'smooth'})">Contact</button>
     </div>
     <button class="nav-cta" id="navDashboardBtn" onclick="location.href='./Dashboard-Connected.html'" style="display:none">Dashboard</button>
     <button class="nav-cta" id="navGetAppBtn">Get App</button>
