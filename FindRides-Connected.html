@@ -55,20 +55,27 @@
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen">
     <!-- Navigation -->
-    <nav class="bg-white shadow">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <i class="fas fa-car text-blue-600 text-2xl"></i>
-                <span class="font-bold text-xl">Car Pulling</span>
-            </div>
-            <div class="flex gap-4">
-                <a href="./Dashboard.html" class="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded">Dashboard</a>
-                <button onclick="logout()" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Logout</button>
-            </div>
+    <nav class="fixed top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 z-40 rounded-full border border-blue-300/20 bg-white/90 backdrop-blur-xl shadow-lg flex items-center justify-between px-4 sm:px-6 h-14">
+        <div class="flex items-center gap-2 sm:gap-3 text-gray-900 cursor-pointer" onclick="location.href='./index.html'" title="Back to Home">
+            <i class="fas fa-car text-blue-600 text-lg sm:text-xl"></i>
+            <span class="font-bold text-sm sm:text-base hidden sm:inline">Quick<span class="text-red-500">Pull</span></span>
+        </div>
+
+        <!-- Navigation Links (hidden on mobile) -->
+        <div class="hidden sm:flex items-center gap-1">
+            <button onclick="location.href='./index.html'" class="px-3 py-1.5 text-gray-600 hover:text-gray-900 rounded-full text-xs font-medium transition-colors hover:bg-blue-50/80">Home</button>
+            <button onclick="location.href='./index.html#features'" class="px-3 py-1.5 text-gray-600 hover:text-gray-900 rounded-full text-xs font-medium transition-colors hover:bg-blue-50/80">Features</button>
+            <button onclick="location.href='./index.html#about'" class="px-3 py-1.5 text-gray-600 hover:text-gray-900 rounded-full text-xs font-medium transition-colors hover:bg-blue-50/80">About</button>
+            <button onclick="location.href='./index.html#contact'" class="px-3 py-1.5 text-gray-600 hover:text-gray-900 rounded-full text-xs font-medium transition-colors hover:bg-blue-50/80">Contact</button>
+        </div>
+
+        <div class="flex gap-2 sm:gap-4 items-center">
+            <a href="./Dashboard-Connected.html" class="px-3 sm:px-4 py-1.5 text-blue-600 hover:bg-blue-50/80 rounded-full text-xs sm:text-sm font-medium transition-colors">Dashboard</a>
+            <button onclick="logout()" class="px-3 sm:px-4 py-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 text-xs sm:text-sm font-medium transition-colors">Logout</button>
         </div>
     </nav>
 
-    <div class="max-w-2xl mx-auto p-4 mt-8">
+    <div class="max-w-2xl mx-auto p-4 pt-20 sm:pt-24">
         <!-- Header -->
         <div class="text-center mb-8">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">Find a Ride</h1>

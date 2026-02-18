@@ -155,41 +155,50 @@
 <body class="bg-background-dark text-white font-display overflow-hidden h-screen flex flex-col">
 
     <!-- Top Navigation -->
-    <header class="h-16 border-b border-[#233648] bg-[#111a22] flex items-center justify-between px-4 sm:px-6 z-40 shrink-0">
-        <div class="flex items-center gap-3 text-white">
-            <div class="size-8 bg-primary/20 rounded-full flex items-center justify-center text-primary">
-                <span class="material-symbols-outlined">share_location</span>
+    <header class="fixed top-1 left-3 right-3 sm:top-2 sm:left-4 sm:right-4 z-40 rounded-full border border-white/12 bg-black/40 backdrop-blur-xl shadow-lg flex items-center justify-between px-4 sm:px-6 h-14">
+        <div class="flex items-center gap-2 sm:gap-3 text-white cursor-pointer" onclick="location.href='./index.html'" title="Back to Home">
+            <div class="w-7 h-7 bg-primary/20 rounded-full flex items-center justify-center text-primary text-sm">
+                <span class="material-symbols-outlined text-[18px]">directions_car</span>
             </div>
-            <h2 class="text-lg sm:text-xl font-bold tracking-tight">Car Pulling</h2>
+            <h2 class="text-sm sm:text-base font-bold tracking-tight hidden sm:inline">Quick<span class="text-red-500">Pull</span></h2>
         </div>
-        <div class="flex items-center gap-2 sm:gap-4">
+
+        <!-- Navigation Links (hidden on mobile) -->
+        <div class="hidden sm:flex items-center gap-1">
+            <button onclick="location.href='./index.html'" class="px-3 py-1.5 text-gray-300 hover:text-white rounded-full text-xs font-medium transition-colors hover:bg-white/10">Home</button>
+            <button onclick="location.href='./index.html#features'" class="px-3 py-1.5 text-gray-300 hover:text-white rounded-full text-xs font-medium transition-colors hover:bg-white/10">Features</button>
+            <button onclick="location.href='./index.html#about'" class="px-3 py-1.5 text-gray-300 hover:text-white rounded-full text-xs font-medium transition-colors hover:bg-white/10">About</button>
+            <button onclick="location.href='./index.html#contact'" class="px-3 py-1.5 text-gray-300 hover:text-white rounded-full text-xs font-medium transition-colors hover:bg-white/10">Contact</button>
+        </div>
+
+        <div class="flex items-center gap-1 sm:gap-3">
             <!-- Mobile Map Toggle Button -->
-            <button id="toggleMapBtn" onclick="toggleMapView()" class="hidden md:hidden p-2 rounded-full hover:bg-[#233648] transition-colors" title="View Map">
-                <span class="material-symbols-outlined text-[24px]">map</span>
+            <button id="toggleMapBtn" onclick="toggleMapView()" class="md:hidden p-2 rounded-full hover:bg-white/10 transition-colors text-white" title="View Map">
+                <span class="material-symbols-outlined text-[20px]">map</span>
             </button>
 
             <!-- Settings Button -->
-            <button class="p-2 rounded-full hover:bg-[#233648] transition-colors" title="Settings">
-                <span class="material-symbols-outlined text-[24px]">settings</span>
+            <button class="p-2 rounded-full hover:bg-white/10 transition-colors text-white hidden sm:flex" title="Settings">
+                <span class="material-symbols-outlined text-[20px]">settings</span>
             </button>
 
             <!-- Profile Dropdown Button -->
             <div class="relative z-50">
-                <button id="profileBtn" class="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-full hover:bg-[#233648] transition-colors z-10 relative">
-                    <span class="material-symbols-outlined text-[24px]">account_circle</span>
-                    <span class="material-symbols-outlined text-[16px] hidden sm:inline">arrow_drop_down</span>
+                <button id="profileBtn" class="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-full hover:bg-white/10 transition-colors z-10 relative text-white">
+                    <span class="material-symbols-outlined text-[20px]">account_circle</span>
+                    <span class="material-symbols-outlined text-[14px] hidden sm:inline">arrow_drop_down</span>
                 </button>
                 <!-- Dropdown Menu -->
-                <div id="profileDropdown" class="profile-dropdown right-0 sm:right-5 top-12 sm:top-16 w-40 sm:w-48 bg-[#192633] border border-[#233648] rounded-lg shadow-2xl hidden">
-                    <div class="p-3 border-b border-[#233648]">
+                <div id="profileDropdown" class="profile-dropdown right-0 sm:right-2 top-12 sm:top-14 w-40 sm:w-48 bg-[#192633]/95 border border-white/10 rounded-lg shadow-2xl hidden backdrop-blur-md">
+                    <div class="p-3 border-b border-white/10">
                         <p class="text-sm font-semibold text-white">Profile</p>
-                        <p class="text-xs text-[#92adc9]" id="profileEmail">Loading...</p>
+                        <p class="text-xs text-gray-400" id="profileEmail">Loading...</p>
                     </div>
-                    <a href="#" class="flex items-center gap-2 px-4 py-2 text-[#92adc9] hover:text-white hover:bg-[#233648] transition-colors text-sm">
+                    <a href="#" class="flex items-center gap-2 px-4 py-2 text-gray-300 hover:text-white hover:bg-white/10 transition-colors text-sm">
                         <span class="material-symbols-outlined text-[18px]">person</span>
                         My Profile
                     </a>
-                    <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-600/10 transition-colors text-sm border-t border-[#233648]">
+                    <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-600/20 transition-colors text-sm border-t border-white/10">
                         <span class="material-symbols-outlined text-[18px]">logout</span>
                         Logout
                     </button>
@@ -199,7 +208,7 @@
     </header>
 
     <!-- Main Content Area -->
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-hidden pt-16 sm:pt-18">
 
         <!-- Left Sidebar (Search & Rides) -->
         <aside id="sidebarContainer" class="w-full md:w-[400px] flex flex-col bg-[#111a22] border-r border-[#233648] shrink-0 z-10 overflow-hidden">

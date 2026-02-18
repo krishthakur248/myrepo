@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickPull</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- HERO SECTION -->
+  <section class="hero">
+    <nav>
+      <div class="logo">QuickPull</div>
+
+      <ul>
+        <li><a href="#hero">Home</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+
+      <button class="btn">Get App</button>
+    </nav>
+
+    <div class="hero-content">
+      <h1>Real-time ride<br>sharing made simple</h1>
+      <p>Connect with people on your route. Save money,
+         reduce traffic, and enjoy a convenient ride-sharing experience.</p>
+    </div>
+    <div class="auth-box">
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="showLogin()">Login</button>
+    <button class="tab" onclick="showSignup()">Sign Up</button>
+  </div>
+
+  <!-- LOGIN FORM -->
+  <div class="form login-form show" id="loginForm">
+    <input type="email" placeholder="Email Address">
+    <input type="password" placeholder="Password">
+    <button class="main-btn">Log In</button>
+  </div>
+
+  <!-- SIGNUP FORM -->
+  <div class="form signup-form" id="signupForm">
+    <input type="text" placeholder="First Name">
+    <input type="text" placeholder="Last Name">
+    <input type="email" placeholder="Email Address">
+    <input type="password" placeholder="Password">
+    <button class="main-btn">Create Account</button>
+  </div>
+
+</div>
+
+
+    <div class="scroll-indicator">↓ Scroll</div>
+  </section>
+
+  <!-- FEATURES SECTION -->
+ <section class="features" id="features">
+
+  <h2>Powerful Features</h2>
+
+  <div class="feature-grid">
+
+    <div class="feature-card"
+      onclick="openFeature('matching')">
+      🚗 Real-time Matching
+    </div>
+
+    <div class="feature-card"
+      onclick="openFeature('tracking')">
+      📍 Live Tracking
+    </div>
+
+    <div class="feature-card"
+      onclick="openFeature('payments')">
+      💳 Secure Payments
+    </div>
+
+    <div class="feature-card"
+      onclick="openFeature('routes')">
+      ⚡ Smart Routes
+    </div>
+
+  </div>
+
+  <!-- Animated Detail Rectangle -->
+  <div class="feature-detail" id="featureDetail">
+    <span class="close" onclick="closeFeature()">✕</span>
+    <h3 id="detailTitle"></h3>
+    <p id="detailText"></p>
+  </div>
+
+</section>
+
+
+  <!-- ABOUT SECTION -->
+  <section class="about" id="about">
+    <h2>About QuickPull</h2>
+    <p>
+      QuickPull helps people share rides safely and efficiently.
+      Our platform reduces cost, traffic and carbon footprint while
+      making travel smarter.
+    </p>
+  </section>
+
+  <!-- CONTACT SECTION -->
+  <section class="contact" id="contact">
+    <h2>Contact Us</h2>
+    <p>Email: support@quickpull.com</p>
+    <p>Phone: +91 99999 99999</p>
+  </section>
+  <script>
+const detail = document.getElementById("featureDetail");
+const title = document.getElementById("detailTitle");
+const text = document.getElementById("detailText");
+
+const data = {
+  matching: {
+    title: "Real-time Matching",
+    text: "QuickPull instantly connects riders going the same direction to reduce waiting time and cost."
+  },
+  tracking: {
+    title: "Live Tracking",
+    text: "Track your ride live on the map with real-time location updates and ETA."
+  },
+  payments: {
+    title: "Secure Payments",
+    text: "All payments are encrypted and processed safely with multiple payment options."
+  },
+  routes: {
+    title: "Smart Routes",
+    text: "AI-powered route suggestions reduce traffic and improve ride efficiency."
+  }
+};
+
+function openFeature(key){
+  title.textContent = data[key].title;
+  text.textContent = data[key].text;
+
+  detail.classList.add("show");
+}
+
+function closeFeature(){
+  detail.classList.remove("show");
+}
+</script>
+<script>
+const loginForm = document.getElementById("loginForm");
+const signupForm = document.getElementById("signupForm");
+const tabs = document.querySelectorAll(".tab");
+
+function showLogin(){
+  loginForm.classList.add("show");
+  signupForm.classList.remove("show");
+
+  tabs[0].classList.add("active");
+  tabs[1].classList.remove("active");
+}
+
+function showSignup(){
+  signupForm.classList.add("show");
+  loginForm.classList.remove("show");
+
+  tabs[1].classList.add("active");
+  tabs[0].classList.remove("active");
+}
+</script>
+
+
+</body>
+</html>

@@ -50,7 +50,7 @@ class AuthService {
   static logout() {
     apiClient.clearToken();
     localStorage.removeItem('user');
-    window.location.href = './Login-Connected.html';
+    window.location.href = './index.html';
   }
 
   // Get current user

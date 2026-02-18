@@ -1,11 +1,1347 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuickPull — Real-Time Ride Sharing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', 'Segoe UI', sans-serif; overflow-x: hidden; }
+
+    ::placeholder { color: #aaa; }
+    input:focus, textarea:focus {
+      border-color: #e02020 !important;
+      background: #fff !important;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(224,32,32,0.1);
+    }
+    textarea { resize: vertical; }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: #e02020; border-radius: 3px; }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(30px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes pulse {
+      0%,100% { transform:translateX(-50%) translateY(0); }
+      50%      { transform:translateX(-50%) translateY(-8px); }
+    }
+    @keyframes panelIn {
+      from { opacity:0; transform:scaleY(0.92); }
+      to   { opacity:1; transform:scaleY(1); }
+    }
+    @keyframes fadeIn {
+      from { opacity:0; }
+      to   { opacity:1; }
+    }
+
+    /* ─── NAVBAR ─── */
+    #navbar {
+      position: fixed; top: 14px; left: 14px; right: 14px; z-index: 9999;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 28px;
+      background: rgba(10,10,20,0.55);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 50px;
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 9px;
+      cursor: pointer; text-decoration: none;
+      font-size: 1.2rem; font-weight: 800; color: #fff; letter-spacing: -0.3px;
+    }
+    .nav-logo span { color: #e02020; }
+    .nav-links { display: flex; gap: 4px; }
+    .nav-pill {
+      background: rgba(255,255,255,0.08); color: #fff; border: none;
+      padding: 8px 18px; border-radius: 30px; font-weight: 600;
+      font-size: .88rem; cursor: pointer; font-family: inherit;
+      transition: all .2s;
+    }
+    .nav-pill:hover { background: rgba(255,255,255,0.15); }
+    .nav-pill.active { background: rgba(224,32,32,0.85); }
+    .nav-cta {
+      background: #e02020; color: #fff; border: none;
+      padding: 10px 24px; border-radius: 28px; font-weight: 700;
+      font-size: .88rem; cursor: pointer; font-family: inherit;
+      box-shadow: 0 4px 14px rgba(224,32,32,0.4); transition: transform .2s;
+    }
+    .nav-cta:hover { transform: scale(1.05); }
+
+    /* ─── HERO ─── */
+    #home {
+      min-height: 100vh; position: relative;
+      display: flex; align-items: center; overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0; z-index: 0;
+    }
+    .hero-bg img {
+      width: 100%; height: 100%;
+      object-fit: cover; object-position: center center;
+    }
+    .hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(110deg,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0.65) 40%,rgba(0,0,0,0.25) 70%,rgba(0,0,0,0.4) 100%);
+    }
+    .hero-fade-bottom {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 160px;
+      background: linear-gradient(to top, #f8f8fb, transparent);
+    }
+    .hero-content {
+      position: relative; z-index: 5; width: 100%;
+      padding: 120px 72px 80px;
+      display: flex; align-items: center; justify-content: space-between; gap: 48px;
+    }
+    .hero-text {
+      max-width: 560px;
+      animation: fadeUp 0.9s ease 0.2s both;
+    }
+    .live-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(224,32,32,0.2); border: 1px solid rgba(224,32,32,0.4);
+      border-radius: 20px; padding: 6px 16px; margin-bottom: 20px;
+    }
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #e02020; display: inline-block;
+      box-shadow: 0 0 8px #e02020;
+    }
+    .live-label {
+      color: #ff6b6b; font-size: .82rem;
+      font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+    }
+    .hero-h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2.8rem,5vw,4.2rem);
+      font-weight: 400; color: #fff; line-height: 1.1;
+      letter-spacing: -1px; margin-bottom: 20px;
+    }
+    .hero-h1 em { font-style: italic; color: #ff8a80; }
+    .hero-p {
+      font-size: 1.05rem; color: rgba(255,255,255,0.75);
+      line-height: 1.75; margin-bottom: 36px; max-width: 440px;
+    }
+    .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+    .btn-primary {
+      background: #e02020; color: #fff; border: none;
+      padding: 14px 32px; border-radius: 30px; font-weight: 700;
+      font-size: 1rem; cursor: pointer; font-family: inherit;
+      box-shadow: 0 6px 24px rgba(224,32,32,0.5);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(224,32,32,0.55);
+    }
+    .btn-ghost {
+      background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);
+      color: #fff; border: 1px solid rgba(255,255,255,0.25);
+      padding: 14px 32px; border-radius: 30px; font-weight: 600;
+      font-size: 1rem; cursor: pointer; font-family: inherit; transition: background .2s;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.2); }
+    .hero-stats { display: flex; gap: 32px; margin-top: 44px; }
+    .stat-n { font-size: 1.5rem; font-weight: 900; color: #fff; }
+    .stat-l { font-size: .8rem; color: rgba(255,255,255,0.6); margin-top: 2px; }
+
+    /* Auth Card */
+    .hero-card {
+      background: rgba(255,255,255,0.92); backdrop-filter: blur(24px);
+      border-radius: 24px; padding: 30px 28px 28px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+      width: 400px; flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.6);
+      animation: fadeUp 0.9s ease 0.45s both;
+    }
+    .tab-bar {
+      display: flex; background: #f0f0f0;
+      border-radius: 30px; padding: 4px; margin-bottom: 22px;
+    }
+    .tab-btn {
+      flex: 1; text-align: center; padding: 10px 0;
+      border-radius: 26px; font-weight: 700; font-size: .92rem;
+      cursor: pointer; border: none; font-family: inherit; transition: all .25s;
+      background: transparent; color: #888;
+    }
+    .tab-btn.active {
+      background: #e02020; color: #fff;
+      box-shadow: 0 3px 14px rgba(224,32,32,.35);
+    }
+    .name-row { display: flex; gap: 10px; margin-bottom: 0; }
+    .field-wrap { position: relative; margin-bottom: 11px; flex: 1; }
+    .field-icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%); font-size: .83rem; color: #bbb; pointer-events: none;
+    }
+    .field-input {
+      width: 100%; padding: 12px 12px 12px 36px;
+      border: 1.5px solid #e8e8e8; border-radius: 11px;
+      font-size: .87rem; background: #fafafa;
+      font-family: inherit; outline: none; color: #333;
+    }
+    .pwd-toggle {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%); cursor: pointer;
+      font-size: .83rem; color: #bbb; user-select: none;
+    }
+    .terms-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: .82rem; color: #666; margin: 12px 0 18px; cursor: pointer;
+    }
+    .terms-label a { color: #e02020; text-decoration: none; font-weight: 600; }
+    .submit-btn {
+      width: 100%;
+      background: linear-gradient(135deg,#e02020,#b80000);
+      color: #fff; border: none; padding: 14px;
+      border-radius: 13px; font-size: .97rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      box-shadow: 0 5px 20px rgba(220,30,30,.4); transition: transform .15s;
+    }
+    .submit-btn:hover { transform: translateY(-2px); }
+    .submit-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .error-msg {
+      padding: 10px 12px;
+      background: #fee;
+      border: 1px solid #fc8888;
+      color: #e02020;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .error-msg.show {
+      display: block;
+    }
+    .notification-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+      max-width: 400px;
+    }
+    .notification {
+      padding: 16px 20px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      margin-bottom: 10px;
+      animation: slideIn 0.3s ease-out;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .notification.success {
+      background: #ecfdf5;
+      color: #059669;
+      border-left: 4px solid #10b981;
+    }
+    .notification.error {
+      background: #fef2f2;
+      color: #dc2626;
+      border-left: 4px solid #ef4444;
+    }
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* Scroll indicator */
+    .scroll-indicator {
+      position: absolute; bottom: 24px; left: 50%;
+      transform: translateX(-50%); z-index: 10;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 6px; cursor: pointer; animation: pulse 2s infinite;
+    }
+    .scroll-label { font-size: .75rem; color: rgba(255,255,255,0.6); font-weight: 500; letter-spacing: .5px; }
+    .scroll-arrow {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.4);
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,0.7); font-size: .75rem;
+    }
+
+    /* ─── FEATURES ─── */
+    #features {
+      min-height: 100vh; background: #f8f8fb; padding: 100px 72px 80px;
+    }
+    .section-tag {
+      background: rgba(224,32,32,0.1); color: #e02020;
+      padding: 6px 18px; border-radius: 20px; font-size: .8rem;
+      font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+    }
+    .section-center { text-align: center; margin-bottom: 56px; }
+    .section-h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2rem,3.5vw,3rem); color: #0f0f0f;
+      margin-top: 14px; margin-bottom: 12px; line-height: 1.15;
+    }
+    .section-h2 em { font-style: italic; color: #e02020; }
+    .section-sub { color: #777; font-size: 1rem; max-width: 460px; margin: 0 auto; line-height: 1.7; }
+
+    .feat-grid {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 22px; max-width: 1080px; margin: 0 auto;
+    }
+    .feat-card {
+      background: #fff; border-radius: 20px; padding: 28px 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+      border: 2px solid transparent;
+      position: relative; overflow: hidden; cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+    }
+    .feat-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+    }
+    .feat-card.active { border-color: var(--color); }
+    .feat-top-bar {
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      border-radius: 20px 20px 0 0;
+      background: var(--color); opacity: 0.4; transition: opacity .3s;
+    }
+    .feat-card.active .feat-top-bar { opacity: 1; }
+    .feat-icon-wrap {
+      width: 52px; height: 52px; border-radius: 15px;
+      background: color-mix(in srgb, var(--color) 12%, transparent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; margin-bottom: 16px;
+    }
+    .feat-title { font-weight: 800; font-size: 1.05rem; color: #111; margin-bottom: 8px; }
+    .feat-short { color: #999; font-size: .87rem; line-height: 1.6; }
+    .feat-toggle { margin-top: 16px; display: flex; align-items: center; gap: 5px; font-size: .84rem; font-weight: 600; color: var(--color); }
+
+    .feat-panel {
+      max-width: 1080px; margin: 24px auto 0;
+      background: #fff; border-radius: 22px; padding: 36px 40px;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.12);
+      border-left: 5px solid var(--panel-color);
+      display: flex; gap: 32px; align-items: flex-start;
+      animation: panelIn .3s ease forwards; transform-origin: top;
+    }
+    .feat-panel-icon {
+      width: 68px; height: 68px; border-radius: 18px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 1.9rem;
+    }
+    .feat-panel-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.6rem; color: #111; margin-bottom: 12px;
+    }
+    .feat-panel-desc { color: #555; font-size: 1rem; line-height: 1.8; margin-bottom: 22px; }
+    .feat-panel-btns { display: flex; gap: 12px; }
+    .panel-cta {
+      border: none; padding: 11px 26px; border-radius: 28px;
+      font-weight: 700; cursor: pointer; font-family: inherit; font-size: .9rem;
+      color: #fff; transition: transform .2s;
+    }
+    .panel-cta:hover { transform: translateY(-2px); }
+    .panel-close {
+      background: #f0f0f0; color: #666; border: none;
+      padding: 11px 26px; border-radius: 28px;
+      font-weight: 600; cursor: pointer; font-family: inherit; font-size: .9rem;
+    }
+
+    /* ─── ABOUT ─── */
+    #about { min-height: 100vh; background: #fff; padding: 100px 72px 80px; }
+    .about-inner { max-width: 1080px; margin: 0 auto; }
+    .about-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 64px; align-items: center; margin-bottom: 80px;
+    }
+    .about-tag { /* reuses .section-tag */ }
+    .about-h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.9rem,3vw,2.7rem); color: #0f0f0f;
+      margin-top: 14px; margin-bottom: 18px; line-height: 1.2;
+    }
+    .about-h2 em { font-style: italic; color: #e02020; }
+    .about-p { color: #555; font-size: .98rem; line-height: 1.85; margin-bottom: 16px; }
+    .about-stats { display: flex; gap: 32px; }
+    .about-stat-n {
+      font-size: 1.75rem; font-weight: 900; color: #e02020;
+      font-family: 'DM Serif Display', serif;
+    }
+    .about-stat-l { font-size: .8rem; color: #999; margin-top: 3px; font-weight: 500; }
+
+    .about-img-wrap {
+      position: relative; border-radius: 24px; overflow: visible;
+    }
+    .about-img-inner { border-radius: 24px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.18); }
+    .about-img-inner img {
+      width: 100%; height: 360px; object-fit: cover; object-position: center 40%;
+      filter: brightness(0.88) saturate(1.1); display: block;
+    }
+    .about-img-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(14,22,44,0.5) 0%, transparent 55%);
+      border-radius: 24px; pointer-events: none;
+    }
+    .about-badge {
+      position: absolute; bottom: -18px; left: -18px;
+      background: #e02020; color: #fff; border-radius: 16px; padding: 16px 20px;
+      box-shadow: 0 8px 28px rgba(224,32,32,0.45);
+    }
+    .about-badge-year { font-family: 'DM Serif Display', serif; font-size: 1.8rem; }
+    .about-badge-label { font-size: .78rem; font-weight: 600; opacity: .9; }
+
+    .team-h3 {
+      font-family: 'DM Serif Display', serif; font-size: 2rem; color: #0f0f0f;
+      text-align: center; margin-bottom: 36px;
+    }
+    .team-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
+    .team-card {
+      background: #f8f8fb; border-radius: 20px; padding: 28px 20px 24px;
+      text-align: center; box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+      transition: transform .3s, box-shadow .3s;
+    }
+    .team-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(0,0,0,0.12); }
+    .team-emoji {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: linear-gradient(135deg,#e02020,#8b0000);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.7rem; margin: 0 auto 14px;
+      box-shadow: 0 6px 20px rgba(224,32,32,0.3);
+    }
+    .team-name { font-weight: 700; color: #111; font-size: .97rem; margin-bottom: 4px; }
+    .team-role { color: #e02020; font-size: .82rem; font-weight: 600; margin-bottom: 10px; }
+    .team-bio { color: #888; font-size: .82rem; line-height: 1.55; }
+
+    /* ─── CONTACT ─── */
+    #contact {
+      min-height: 100vh; position: relative; padding: 100px 72px 80px; overflow: hidden;
+    }
+    .contact-bg { position: absolute; inset: 0; z-index: 0; }
+    .contact-bg img {
+      width: 100%; height: 100%; object-fit: cover;
+      object-position: center 60%; filter: brightness(0.25) saturate(0.6);
+    }
+    .contact-bg-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(5,5,15,0.7), rgba(5,5,15,0.85));
+    }
+    .contact-inner { position: relative; z-index: 5; max-width: 1080px; margin: 0 auto; }
+    .contact-tag {
+      background: rgba(224,32,32,0.2); border: 1px solid rgba(224,32,32,0.3);
+      color: #ff8a80; padding: 6px 18px; border-radius: 20px;
+      font-size: .8rem; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+    }
+    .contact-h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.9rem,3.5vw,3rem); color: #fff;
+      margin-top: 14px; margin-bottom: 12px; line-height: 1.15;
+    }
+    .contact-h2 em { font-style: italic; color: #ff8a80; }
+    .contact-sub { color: rgba(255,255,255,0.6); font-size: 1rem; max-width: 440px; margin: 0 auto; }
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 0; }
+    .contact-info-h { font-weight: 700; font-size: 1.2rem; color: #fff; margin-bottom: 28px; }
+    .contact-item { display: flex; gap: 16px; margin-bottom: 24px; }
+    .contact-ico {
+      width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0;
+      background: rgba(224,32,32,0.2); border: 1px solid rgba(224,32,32,0.3);
+      display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+    }
+    .contact-item-title { font-weight: 700; color: #fff; font-size: .92rem; margin-bottom: 3px; }
+    .contact-item-detail { color: rgba(255,255,255,0.55); font-size: .87rem; line-height: 1.55; }
+    .social-row { margin-top: 32px; }
+    .social-label { font-weight: 600; color: rgba(255,255,255,0.7); font-size: .88rem; margin-bottom: 14px; text-transform: uppercase; letter-spacing: .5px; }
+    .social-icons { display: flex; gap: 12px; }
+    .social-btn {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: rgba(224,32,32,0.8); display: flex; align-items: center;
+      justify-content: center; font-size: 1rem; cursor: pointer;
+      transition: transform .2s; box-shadow: 0 4px 14px rgba(224,32,32,0.3);
+    }
+    .social-btn:hover { transform: scale(1.15) rotate(5deg); }
+
+    .contact-form-card {
+      background: rgba(255,255,255,0.07); backdrop-filter: blur(20px);
+      border-radius: 22px; padding: 36px;
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+    }
+    .form-label { font-weight: 600; font-size: .83rem; color: rgba(255,255,255,0.7); display: block; margin-bottom: 6px; }
+    .form-input {
+      width: 100%; padding: 13px 16px;
+      border: 1.5px solid rgba(255,255,255,0.15); border-radius: 12px;
+      font-size: .9rem; color: #111; background: rgba(255,255,255,0.92);
+      font-family: inherit; outline: none; margin-bottom: 14px;
+    }
+    .form-textarea {
+      width: 100%; padding: 13px 16px;
+      border: 1.5px solid rgba(255,255,255,0.15); border-radius: 12px;
+      font-size: .9rem; color: #111; background: rgba(255,255,255,0.92);
+      font-family: inherit; outline: none; resize: vertical; margin-bottom: 20px;
+    }
+    .form-h { font-weight: 700; font-size: 1.15rem; color: #fff; margin-bottom: 22px; }
+    .form-submit {
+      width: 100%; background: linear-gradient(135deg,#e02020,#b80000);
+      color: #fff; border: none; padding: 14px; border-radius: 13px;
+      font-size: 1rem; font-weight: 700; cursor: pointer; font-family: inherit;
+      box-shadow: 0 5px 20px rgba(220,30,30,0.5); transition: transform .15s;
+    }
+    .form-submit:hover { transform: translateY(-2px); }
+    .success-msg { text-align: center; padding: 50px 0; animation: fadeIn .4s ease; }
+    .success-ico { font-size: 3rem; margin-bottom: 16px; }
+    .success-h { font-weight: 800; color: #fff; font-size: 1.3rem; margin-bottom: 8px; }
+    .success-p { color: rgba(255,255,255,0.6); }
+
+    /* ─── FOOTER ─── */
+    footer {
+      background: #05050f; color: rgba(255,255,255,0.5);
+      padding: 30px 72px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .footer-logo {
+      display: flex; align-items: center; gap: 9px;
+      font-size: 1.1rem; font-weight: 800; color: #fff;
+    }
+    .footer-logo-ring {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 2.5px solid #e02020; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .footer-logo-dot { width: 8px; height: 8px; border-radius: 50%; border: 2.5px solid #e02020; }
+    .footer-logo span { color: #e02020; }
+    .footer-copy { font-size: .83rem; }
+    .footer-links { display: flex; gap: 22px; }
+    .footer-link {
+      cursor: pointer; font-size: .83rem; transition: color .2s;
+      background: none; border: none; color: rgba(255,255,255,0.5);
+      font-family: inherit;
+    }
+    .footer-link:hover { color: #e02020; }
+
+    /* ══════════════════════════════════
+       HAMBURGER MENU (mobile only)
+    ══════════════════════════════════ */
+    .hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      cursor: pointer; padding: 4px; background: none; border: none;
+    }
+    .hamburger span {
+      display: block; width: 22px; height: 2px;
+      background: #fff; border-radius: 2px; transition: all .3s;
+    }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* Mobile nav drawer */
+    .mobile-menu {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(5,5,15,0.97); z-index: 9998;
+      flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      animation: fadeIn .25s ease;
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu .nav-pill {
+      font-size: 1.3rem; padding: 14px 48px; border-radius: 14px;
+      background: rgba(255,255,255,0.06);
+    }
+    .mobile-menu .nav-pill.active { background: rgba(224,32,32,0.85); }
+    .mobile-menu .nav-cta { margin-top: 8px; padding: 14px 48px; font-size: 1rem; border-radius: 14px; }
+
+    /* ══════════════════════════════════
+       TABLET  (≤1024px)
+    ══════════════════════════════════ */
+    @media (max-width: 1024px) {
+      .hero-content { padding: 110px 40px 70px; gap: 32px; }
+      .hero-card { width: 340px; }
+      #features { padding: 80px 40px 60px; }
+      .feat-grid { grid-template-columns: repeat(2,1fr); }
+      #about { padding: 80px 40px 60px; }
+      .about-grid { gap: 40px; }
+      #contact { padding: 80px 40px 60px; }
+      footer { padding: 26px 40px; }
+    }
+
+    /* ══════════════════════════════════
+       MOBILE LARGE  (≤768px)
+    ══════════════════════════════════ */
+    @media (max-width: 768px) {
+
+      /* Navbar: hide links, show hamburger */
+      .nav-links { display: none; }
+      .nav-cta   { display: none; }
+      .hamburger { display: flex; }
+      #navbar { padding: 12px 20px; top: 10px; left: 10px; right: 10px; }
+
+      /* Hero: stack vertically */
+      .hero-content {
+        flex-direction: column; align-items: flex-start;
+        padding: 100px 24px 60px; gap: 32px;
+      }
+      .hero-text { max-width: 100%; }
+      .hero-h1 { font-size: clamp(2.2rem, 8vw, 3rem); letter-spacing: -.5px; }
+      .hero-p  { font-size: .95rem; max-width: 100%; }
+      .hero-ctas { flex-direction: column; gap: 12px; }
+      .btn-primary, .btn-ghost { width: 100%; text-align: center; padding: 14px 20px; }
+      .hero-stats { gap: 20px; flex-wrap: wrap; }
+      .stat-n { font-size: 1.25rem; }
+
+      /* Auth card: full width */
+      .hero-card { width: 100%; }
+
+      /* Features */
+      #features { padding: 70px 20px 50px; }
+      .feat-grid { grid-template-columns: 1fr; gap: 16px; }
+      .feat-panel { padding: 24px 20px; flex-direction: column; gap: 16px; }
+      .feat-panel-icon { width: 52px; height: 52px; font-size: 1.4rem; }
+      .feat-panel-title { font-size: 1.3rem; }
+      .feat-panel-btns { flex-direction: column; }
+      .panel-cta, .panel-close { width: 100%; text-align: center; }
+
+      /* About */
+      #about { padding: 70px 20px 50px; }
+      .about-grid { grid-template-columns: 1fr; gap: 36px; }
+      .about-img-inner img { height: 240px; }
+      .about-badge { bottom: -14px; left: -10px; padding: 12px 16px; }
+      .about-badge-year { font-size: 1.4rem; }
+      .about-stats { gap: 20px; flex-wrap: wrap; }
+      .about-stat-n { font-size: 1.4rem; }
+      .team-grid { grid-template-columns: repeat(2,1fr); gap: 14px; }
+
+      /* Contact */
+      #contact { padding: 70px 20px 50px; }
+      .contact-grid { grid-template-columns: 1fr; gap: 32px; }
+
+      /* Footer */
+      footer {
+        flex-direction: column; gap: 16px; padding: 28px 24px; text-align: center;
+      }
+      .footer-links { gap: 18px; }
+    }
+
+    /* ══════════════════════════════════
+       MOBILE SMALL  (≤480px)
+    ══════════════════════════════════ */
+    @media (max-width: 480px) {
+      #navbar { top: 8px; left: 8px; right: 8px; padding: 10px 16px; }
+      .nav-logo { font-size: 1.05rem; }
+
+      .hero-content { padding: 90px 16px 50px; }
+      .hero-h1 { font-size: clamp(1.9rem, 9vw, 2.4rem); }
+      .hero-p  { font-size: .9rem; }
+      .hero-stats { gap: 14px; }
+      .stat-n { font-size: 1.1rem; }
+      .stat-l { font-size: .72rem; }
+      .live-badge { padding: 5px 12px; }
+
+      .hero-card { padding: 22px 16px 20px; border-radius: 18px; }
+      .tab-btn   { font-size: .84rem; }
+
+      #features { padding: 60px 16px 40px; }
+      .section-h2 { font-size: 1.7rem; }
+      .feat-card  { padding: 22px 18px; }
+      .feat-panel { padding: 20px 16px; border-left-width: 3px; }
+
+      #about { padding: 60px 16px 40px; }
+      .about-h2 { font-size: 1.6rem; }
+      .about-img-inner img { height: 200px; }
+      .team-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .team-card { padding: 20px 14px 18px; }
+      .team-emoji { width: 52px; height: 52px; font-size: 1.4rem; }
+      .team-h3   { font-size: 1.6rem; }
+
+      #contact { padding: 60px 16px 40px; }
+      .contact-h2 { font-size: 1.7rem; }
+      .contact-form-card { padding: 24px 16px; }
+      .contact-ico { width: 38px; height: 38px; font-size: .95rem; }
+
+      footer { padding: 22px 16px; gap: 12px; }
+      .footer-links { gap: 14px; }
+    }
+
+    /* ══════════════════════════════════
+       VERY SMALL  (≤360px)
+    ══════════════════════════════════ */
+    @media (max-width: 360px) {
+      .hero-h1 { font-size: 1.75rem; }
+      .team-grid { grid-template-columns: 1fr; }
+      .hero-stats { gap: 10px; }
+      .name-row { flex-direction: column; gap: 0; }
+    }
+
+  </style>
 </head>
 <body>
-    <a href="./Login-Connected.html"><h1>Start</h1></a>
+
+  <!-- ══════════════════════════════════
+       NAVBAR
+  ══════════════════════════════════ -->
+
+  <!-- Mobile Menu Drawer -->
+  <div class="mobile-menu" id="mobile-menu">
+    <button class="nav-pill active" id="mnav-home"     onclick="mobileNav('home')">Home</button>
+    <button class="nav-pill"        id="mnav-features" onclick="mobileNav('features')">Features</button>
+    <button class="nav-pill"        id="mnav-about"    onclick="mobileNav('about')">About</button>
+    <button class="nav-pill"        id="mnav-contact"  onclick="mobileNav('contact')">Contact</button>
+    <button class="nav-cta"         onclick="closeMenu()">Get App</button>
+  </div>
+
+  <nav id="navbar">
+    <a class="nav-logo" onclick="scrollTo('home')">
+      Quick<span>Pull</span>
+    </a>
+    <div class="nav-links">
+      <button class="nav-pill active" id="nav-home"     onclick="scrollTo('home')">Home</button>
+      <button class="nav-pill"        id="nav-features" onclick="scrollTo('features')">Features</button>
+      <button class="nav-pill"        id="nav-about"    onclick="scrollTo('about')">About</button>
+      <button class="nav-pill"        id="nav-contact"  onclick="scrollTo('contact')">Contact</button>
+    </div>
+    <button class="nav-cta" id="navDashboardBtn" onclick="location.href='./Dashboard-Connected.html'" style="display:none">Dashboard</button>
+    <button class="nav-cta" id="navGetAppBtn">Get App</button>
+    <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- ══════════════════════════════════
+       HERO
+  ══════════════════════════════════ -->
+  <section id="home">
+    <div class="hero-bg">
+      <img src="./Project/bg.png" alt="City background"
+           onerror="this.parentNode.style.background='linear-gradient(135deg,#0d1b35 0%,#1c3260 45%,#d4651a 70%,#0d1b35 100%)'; this.style.display='none'"/>
+      <div class="hero-overlay"></div>
+      <div class="hero-fade-bottom"></div>
+    </div>
+
+    <div class="hero-content">
+      <!-- Left: Headline -->
+      <div class="hero-text">
+        <div class="live-badge">
+          <span class="live-dot"></span>
+          <span class="live-label">Live</span>
+        </div>
+        <h1 class="hero-h1">
+          Real-time ride<br/>
+          <em>sharing</em> made<br/>
+          simple
+        </h1>
+        <p class="hero-p">
+          Connect with people on your route. Save money, reduce traffic,
+          and enjoy a convenient ride-sharing experience across India.
+        </p>
+        <div class="hero-ctas">
+          <button class="btn-primary" onclick="scrollTo('features')">Explore Features →</button>
+          <button class="btn-ghost"   onclick="scrollTo('about')">Our Story</button>
+        </div>
+        <div class="hero-stats">
+          <div><div class="stat-n">+2,000</div><div class="stat-l">Rides Daily</div></div>
+          <div><div class="stat-n">4.9★</div><div class="stat-l">User Rating</div></div>
+          <div><div class="stat-n">12</div><div class="stat-l">Cities</div></div>
+          <div><div class="stat-n">50K+</div><div class="stat-l">Happy Users</div></div>
+        </div>
+      </div>
+
+      <!-- Right: Auth Card -->
+      <div class="hero-card">
+        <div class="tab-bar">
+          <button class="tab-btn active" id="tab-login"  onclick="setTab('login')">Login</button>
+          <button class="tab-btn" id="tab-signup" onclick="setTab('signup')">Sign Up</button>
+        </div>
+        <form id="auth-form"></form>
+      </div>
+    </div>
+
+    <div class="scroll-indicator" onclick="scrollTo('features')">
+      <span class="scroll-label">SCROLL</span>
+      <div class="scroll-arrow">▼</div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════
+       FEATURES
+  ══════════════════════════════════ -->
+  <section id="features">
+    <div class="section-center">
+      <span class="section-tag">Why QuickPull</span>
+      <h2 class="section-h2">Everything you need<br/><em>in one ride</em></h2>
+      <p class="section-sub">Click any card to read the full details below.</p>
+    </div>
+
+    <div class="feat-grid" id="feat-grid"></div>
+    <div id="feat-panel"></div>
+  </section>
+
+  <!-- ══════════════════════════════════
+       ABOUT
+  ══════════════════════════════════ -->
+  <section id="about">
+    <div class="about-inner">
+      <div class="about-grid">
+        <div>
+          <span class="section-tag">Our Story</span>
+          <h2 class="about-h2">Built for a smarter,<br/><em>greener</em> tomorrow</h2>
+          <p class="about-p">QuickPull was founded in 2022 by engineers and urban planners tired of seeing empty cars clog city streets. Our mission is simple: make ride-sharing so seamless and affordable that choosing to share becomes the obvious choice.</p>
+          <p class="about-p" style="margin-bottom:32px">Today, QuickPull operates in 12 cities across India, facilitating over 2,000 rides every single day. Our community of verified drivers and riders grows by thousands each week.</p>
+          <div class="about-stats">
+            <div><div class="about-stat-n">12</div><div class="about-stat-l">Cities</div></div>
+            <div><div class="about-stat-n">2K+</div><div class="about-stat-l">Daily Rides</div></div>
+            <div><div class="about-stat-n">4.9★</div><div class="about-stat-l">Rating</div></div>
+            <div><div class="about-stat-n">50K+</div><div class="about-stat-l">Users</div></div>
+          </div>
+        </div>
+        <div class="about-img-wrap">
+          <div class="about-img-inner">
+            <img src="./Project/bg.png" alt="City" onerror="this.style.display='none'"/>
+          </div>
+          <div class="about-img-overlay"></div>
+          <div class="about-badge">
+            <div class="about-badge-year">2022</div>
+            <div class="about-badge-label">Founded</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Team -->
+      <h3 class="team-h3">Meet the Team</h3>
+      <div class="team-grid" id="team-grid"></div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════
+       CONTACT
+  ══════════════════════════════════ -->
+  <section id="contact">
+    <div class="contact-bg">
+      <img src="./Project/bg.png" alt="" onerror="this.parentNode.style.background='#0a0f1e'; this.style.display='none'"/>
+      <div class="contact-bg-overlay"></div>
+    </div>
+    <div class="contact-inner">
+      <div class="section-center" style="margin-bottom:56px">
+        <span class="contact-tag">Get In Touch</span>
+        <h2 class="contact-h2">We'd love to hear<br/><em>from you</em></h2>
+        <p class="contact-sub">Have a question or feedback? Our team responds within 24 hours.</p>
+      </div>
+      <div class="contact-grid">
+        <!-- Info -->
+        <div>
+          <h3 class="contact-info-h">Contact Information</h3>
+          <div class="contact-item">
+            <div class="contact-ico">📍</div>
+            <div><div class="contact-item-title">Our Office</div><div class="contact-item-detail">42 MG Road, Bengaluru, Karnataka 560001, India</div></div>
+          </div>
+          <div class="contact-item">
+            <div class="contact-ico">📞</div>
+            <div><div class="contact-item-title">Phone</div><div class="contact-item-detail">+91 98765 43210</div></div>
+          </div>
+          <div class="contact-item">
+            <div class="contact-ico">✉️</div>
+            <div><div class="contact-item-title">Email</div><div class="contact-item-detail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="bcd4d9d0d0d3fccdc9d5dfd7ccc9d0d092ddcccc">[email&#160;protected]</a></div></div>
+          </div>
+          <div class="contact-item">
+            <div class="contact-ico">⏰</div>
+            <div><div class="contact-item-title">Support Hours</div><div class="contact-item-detail">Mon–Sat, 9AM – 8PM IST</div></div>
+          </div>
+          <div class="social-row">
+            <div class="social-label">Follow Us</div>
+            <div class="social-icons">
+              <div class="social-btn">🐦</div>
+              <div class="social-btn">📸</div>
+              <div class="social-btn">💼</div>
+              <div class="social-btn">📘</div>
+            </div>
+          </div>
+        </div>
+        <!-- Form -->
+        <div class="contact-form-card" id="contact-form-wrap"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── FOOTER ─── -->
+  <footer>
+    <div class="footer-logo">
+      <div class="footer-logo-ring"><div class="footer-logo-dot"></div></div>
+      Quick<span>Pull</span>
+    </div>
+    <span class="footer-copy">© 2026 QuickPull. All rights reserved.</span>
+    <div class="footer-links">
+      <button class="footer-link">Privacy</button>
+      <button class="footer-link">Terms</button>
+      <button class="footer-link">Support</button>
+    </div>
+  </footer>
+
+  <!-- Notification Container -->
+  <div id="notification" class="notification-container"></div>
+
+  <!-- Include required scripts -->
+  <script src="api-client.js"></script>
+  <script src="auth-service.js"></script>
+  <script>
+    /* ══════════════════════════════════
+       DATA
+    ══════════════════════════════════ */
+    const features = [
+      { id:1, icon:"🚗", title:"Real-Time Matching", color:"#e02020",
+        short:"AI instantly connects drivers & riders heading the same way.",
+        desc:"Our AI-powered algorithm instantly connects drivers and riders heading in the same direction. No waiting, no guessing — your perfect match appears in seconds, optimizing routes for everyone on the road and cutting average wait times to under 3 minutes." },
+      { id:2, icon:"💰", title:"Smart Pricing", color:"#f59e0b",
+        short:"Save up to 60% with transparent fare splitting.",
+        desc:"Dynamic fare splitting ensures everyone pays their fair share. Save up to 60% compared to solo rides. Transparent pricing with no hidden fees — what you see is what you pay, always. Our algorithm adjusts in real-time based on demand, distance, and number of riders." },
+      { id:3, icon:"🛡️", title:"Safety First", color:"#10b981",
+        short:"Verified drivers, background checks & live GPS tracking.",
+        desc:"Every driver and rider is verified with government ID, background checks, and real-time GPS tracking. Share your trip with loved ones, rate your experience, and travel with complete peace of mind. Our 24/7 support team is always one tap away." },
+      { id:4, icon:"🌿", title:"Eco-Friendly", color:"#06b6d4",
+        short:"Reduce carbon emissions with every shared ride.",
+        desc:"By sharing rides, we collectively reduce carbon emissions by thousands of tons annually. Join the green movement — every shared ride means fewer cars on the road and a cleaner planet for tomorrow. Track your personal carbon savings in the app." },
+      { id:5, icon:"⚡", title:"Instant Booking", color:"#8b5cf6",
+        short:"Book in under 10 seconds. Schedule ahead or ride now.",
+        desc:"Book a ride in under 10 seconds. Our streamlined interface gets you from search to confirmed booking faster than ever. Schedule rides in advance or grab one right now — QuickPull is always ready, 24 hours a day, 7 days a week." },
+      { id:6, icon:"⭐", title:"Top-Rated Experience", color:"#f43f5e",
+        short:"4.9-star average across 2,000+ daily rides.",
+        desc:"With a 4.9-star average across 2,000+ daily rides, our community-driven rating system ensures consistent quality. Friendly drivers, clean cars, and punctual pickups — every single time. Our top-rated drivers earn bonuses and recognition every month." },
+    ];
+
+    const team = [
+      { name:"Krish",        role:"FrontEnd, Database",   emoji:"👨‍💼", bio:"Ex-Google engineer with a passion for urban mobility." },
+      { name:"Kumar Jitin",  role:"Leader, Backend",      emoji:"👩‍💻", bio:"Built scalable systems at Uber before founding QuickPull." },
+      { name:"Nitish Kumar", role:"Head of Design",       emoji:"🎨", bio:"Award-winning designer focused on human-centered UX." },
+      { name:"Kapil Thakur", role:"Head of Operations",   emoji:"⚙️", bio:"Logistics expert ensuring smooth rides across 12 cities." },
+    ];
+
+    /* ══════════════════════════════════
+       STATE
+    ══════════════════════════════════ */
+    let currentTab      = 'login';
+    let showPwd         = false;
+    let selectedFeatId  = null;
+    let formSent        = false;
+    let formData        = { name:'', email:'', message:'' };
+
+    /* ══════════════════════════════════
+       NAVIGATION
+    ══════════════════════════════════ */
+    let menuOpen = false;
+
+    function toggleMenu() {
+      menuOpen = !menuOpen;
+      document.getElementById('mobile-menu').classList.toggle('open', menuOpen);
+      document.getElementById('hamburger').classList.toggle('open', menuOpen);
+      document.body.style.overflow = menuOpen ? 'hidden' : '';
+    }
+
+    function closeMenu() {
+      menuOpen = false;
+      document.getElementById('mobile-menu').classList.remove('open');
+      document.getElementById('hamburger').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function mobileNav(id) {
+      closeMenu();
+      setTimeout(() => scrollTo(id), 100);
+    }
+
+    function scrollTo(id) {
+      document.getElementById(id)?.scrollIntoView({ behavior:'smooth' });
+      // Update active nav pills (desktop + mobile)
+      document.querySelectorAll('.nav-pill').forEach(b => b.classList.remove('active'));
+      const pill  = document.getElementById('nav-' + id);
+      const mpill = document.getElementById('mnav-' + id);
+      if (pill)  pill.classList.add('active');
+      if (mpill) mpill.classList.add('active');
+    }
+
+    // Highlight nav on scroll
+    const sections = ['home','features','about','contact'];
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          document.querySelectorAll('.nav-pill').forEach(b => b.classList.remove('active'));
+          const pill  = document.getElementById('nav-'  + e.target.id);
+          const mpill = document.getElementById('mnav-' + e.target.id);
+          if (pill)  pill.classList.add('active');
+          if (mpill) mpill.classList.add('active');
+        }
+      });
+    }, { threshold: 0.35 });
+    sections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    /* ══════════════════════════════════
+       AUTH FORM
+    ══════════════════════════════════ */
+    function setTab(tab) {
+      currentTab = tab;
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+      renderAuthForm();
+    }
+
+    function togglePwd() {
+      showPwd = !showPwd;
+      // Find the password input (could be login or signup)
+      const inp = document.getElementById('loginPassword') || document.getElementById('signupPassword');
+      const ico = document.getElementById('pwd-toggle');
+      if (inp) inp.type = showPwd ? 'text' : 'password';
+      if (ico) ico.textContent = showPwd ? '👁' : '🙈';
+    }
+
+    function renderAuthForm() {
+      const wrap = document.getElementById('auth-form');
+      if (!wrap) return;
+      let html = '';
+
+      html += `<div class="error-msg" id="formError"></div>`;
+
+      if (currentTab === 'signup') {
+        html += `
+          <div class="name-row">
+            <div class="field-wrap">
+              <span class="field-icon">👤</span>
+              <input class="field-input" id="signupFirstName" placeholder="First Name" type="text"/>
+            </div>
+            <div class="field-wrap">
+              <span class="field-icon">👤</span>
+              <input class="field-input" id="signupLastName" placeholder="Last Name" type="text"/>
+            </div>
+          </div>`;
+      }
+
+      html += `
+        <div class="field-wrap">
+          <span class="field-icon">✉️</span>
+          <input class="field-input" ${currentTab === 'signup' ? 'id="signupEmail"' : 'id="loginEmail"'} placeholder="Email Address" type="email"/>
+        </div>`;
+
+      if (currentTab === 'signup') {
+        html += `
+          <div class="field-wrap">
+            <span class="field-icon">📞</span>
+            <input class="field-input" id="signupPhone" placeholder="Phone (+91...)" type="tel"/>
+          </div>`;
+      }
+
+      html += `
+        <div class="field-wrap" style="position:relative;margin-bottom:11px">
+          <span class="field-icon">🔒</span>
+          <input class="field-input" ${currentTab === 'signup' ? 'id="signupPassword"' : 'id="loginPassword"'} type="password" placeholder="Password" style="padding-right:36px"/>
+          <span class="pwd-toggle" id="pwd-toggle" onclick="togglePwd()">🙈</span>
+        </div>`;
+
+      if (currentTab === 'signup') {
+        html += `
+          <label class="terms-label">
+            <input type="checkbox" id="agreeTerms" style="accent-color:#e02020"/>
+            I agree to the <a href="#">Terms &amp; Conditions</a>
+          </label>`;
+      } else {
+        html += `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;margin-top:8px">
+            <label class="terms-label" style="margin:0">
+              <input type="checkbox" style="accent-color:#e02020"/>
+              Remember me
+            </label>
+            <a href="#" style="color:#e02020;text-decoration:none;font-size:13px;font-weight:500">Forgot Password?</a>
+          </div>`;
+      }
+
+      html += `
+        <button type="submit" class="submit-btn" id="submitBtn">
+          ${currentTab === 'signup' ? 'Create Account →' : 'Login →'}
+        </button>`;
+
+      wrap.innerHTML = html;
+
+      // Attach form submit handler
+      wrap.onsubmit = function(e) {
+        e.preventDefault();
+        if (currentTab === 'signup') {
+          handleSignup();
+        } else {
+          handleLogin();
+        }
+      };
+    }
+
+    /* ══════════════════════════════════
+       FEATURES
+    ══════════════════════════════════ */
+    function renderFeatureCards() {
+      const grid = document.getElementById('feat-grid');
+      grid.innerHTML = features.map(f => `
+        <div class="feat-card ${selectedFeatId === f.id ? 'active' : ''}"
+             style="--color:${f.color}"
+             onclick="toggleFeature(${f.id})">
+          <div class="feat-top-bar"></div>
+          <div class="feat-icon-wrap" style="background:${f.color}20">${f.icon}</div>
+          <h3 class="feat-title">${f.title}</h3>
+          <p class="feat-short">${f.short}</p>
+          <div class="feat-toggle">
+            ${selectedFeatId === f.id ? '▲ Collapse' : '▼ Learn more'}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderFeaturePanel() {
+      const wrap = document.getElementById('feat-panel');
+      if (!selectedFeatId) { wrap.innerHTML = ''; return; }
+      const f = features.find(x => x.id === selectedFeatId);
+      if (!f) { wrap.innerHTML = ''; return; }
+      wrap.innerHTML = `
+        <div class="feat-panel" style="--panel-color:${f.color}">
+          <div class="feat-panel-icon" style="background:${f.color}20">${f.icon}</div>
+          <div style="flex:1">
+            <h3 class="feat-panel-title">${f.title}</h3>
+            <p class="feat-panel-desc">${f.desc}</p>
+            <div class="feat-panel-btns">
+              <button class="panel-cta"
+                      style="background:${f.color}; box-shadow:0 4px 14px ${f.color}55"
+                      onclick="scrollTo('contact')">Get Started</button>
+              <button class="panel-close" onclick="closeFeature()">Close ✕</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function toggleFeature(id) {
+      selectedFeatId = (selectedFeatId === id) ? null : id;
+      renderFeatureCards();
+      renderFeaturePanel();
+      if (selectedFeatId) {
+        setTimeout(() => {
+          document.querySelector('.feat-panel')?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+        }, 50);
+      }
+    }
+
+    function closeFeature() {
+      selectedFeatId = null;
+      renderFeatureCards();
+      renderFeaturePanel();
+    }
+
+    /* ══════════════════════════════════
+       TEAM
+    ══════════════════════════════════ */
+    function renderTeam() {
+      const grid = document.getElementById('team-grid');
+      grid.innerHTML = team.map(m => `
+        <div class="team-card">
+          <div class="team-emoji">${m.emoji}</div>
+          <div class="team-name">${m.name}</div>
+          <div class="team-role">${m.role}</div>
+          <div class="team-bio">${m.bio}</div>
+        </div>
+      `).join('');
+    }
+
+    /* ══════════════════════════════════
+       CONTACT FORM
+    ══════════════════════════════════ */
+    function renderContactForm() {
+      const wrap = document.getElementById('contact-form-wrap');
+      if (formSent) {
+        wrap.innerHTML = `
+          <div class="success-msg">
+            <div class="success-ico">✅</div>
+            <h3 class="success-h">Message Sent!</h3>
+            <p class="success-p">We'll get back to you within 24 hours.</p>
+          </div>`;
+        return;
+      }
+      wrap.innerHTML = `
+        <h3 class="form-h">Send a Message</h3>
+        <label class="form-label">Full Name</label>
+        <input class="form-input" type="text" id="cf-name" placeholder="John Doe" value="${formData.name}" oninput="formData.name=this.value"/>
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="cf-email" placeholder="john@example.com" value="${formData.email}" oninput="formData.email=this.value"/>
+        <label class="form-label">Message</label>
+        <textarea class="form-textarea" id="cf-msg" rows="4" placeholder="How can we help?" oninput="formData.message=this.value">${formData.message}</textarea>
+        <button class="form-submit" onclick="sendMessage()">Send Message →</button>`;
+    }
+
+    function sendMessage() {
+      const name    = document.getElementById('cf-name')?.value.trim();
+      const email   = document.getElementById('cf-email')?.value.trim();
+      const message = document.getElementById('cf-msg')?.value.trim();
+      if (!name || !email || !message) return;
+      formSent = true;
+      renderContactForm();
+      setTimeout(() => { formSent = false; formData = {name:'',email:'',message:''}; renderContactForm(); }, 4000);
+    }
+
+    /* ══════════════════════════════════
+       AUTHENTICATION FUNCTIONS
+    ══════════════════════════════════ */
+    function showError(message) {
+      const errorDiv = document.getElementById('formError');
+      if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.classList.add('show');
+      }
+    }
+
+    function clearError() {
+      const errorDiv = document.getElementById('formError');
+      if (errorDiv) {
+        errorDiv.classList.remove('show');
+      }
+    }
+
+    function showNotification(message, type = 'success') {
+      const container = document.getElementById('notification');
+      const notif = document.createElement('div');
+      notif.className = `notification ${type}`;
+      notif.textContent = message;
+      container.appendChild(notif);
+      setTimeout(() => {
+        notif.remove();
+      }, 3000);
+    }
+
+    async function handleLogin() {
+      clearError();
+      const email = document.getElementById('loginEmail')?.value.trim();
+      const password = document.getElementById('loginPassword')?.value.trim();
+      const submitBtn = document.getElementById('submitBtn');
+
+      if (!email || !password) {
+        showNotification('Please fill in all fields', 'error');
+        return;
+      }
+
+      try {
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Logging in...';
+        }
+
+        const response = await AuthService.login(email, password);
+
+        if (response.success) {
+          showNotification('✓ Login successful! Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = './Dashboard-Connected.html';
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        showNotification(error.message || 'Login failed. Please check your credentials.', 'error');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Login →';
+        }
+      }
+    }
+
+    async function handleSignup() {
+      clearError();
+      const firstName = document.getElementById('signupFirstName')?.value.trim();
+      const lastName = document.getElementById('signupLastName')?.value.trim();
+      const email = document.getElementById('signupEmail')?.value.trim();
+      const phone = document.getElementById('signupPhone')?.value.trim();
+      const password = document.getElementById('signupPassword')?.value.trim();
+      const agreeTerms = document.getElementById('agreeTerms')?.checked;
+      const submitBtn = document.getElementById('submitBtn');
+
+      if (!firstName || !lastName || !email || !phone || !password) {
+        showNotification('Please fill in all fields', 'error');
+        return;
+      }
+
+      if (!agreeTerms) {
+        showNotification('Please agree to the Terms & Conditions', 'error');
+        return;
+      }
+
+      try {
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Creating account...';
+        }
+
+        const formData = {
+          firstName,
+          lastName,
+          email,
+          phone,
+          password,
+          userType: 'both'
+        };
+
+        const response = await AuthService.register(formData);
+
+        if (response.success) {
+          showNotification('✓ Account created! Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = './Dashboard-Connected.html';
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('Signup error:', error);
+        showNotification(error.message || 'Signup failed. Please try again.', 'error');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Create Account →';
+        }
+      }
+    }
+
+    /* ══════════════════════════════════
+       INIT & AUTHENTICATION CHECK
+    ═══════*/
+    function initializePage() {
+      // Check if user is logged in
+      if (AuthService.isAuthenticated()) {
+        // Hide login/signup form
+        document.getElementById('auth-form').parentElement.style.display = 'none';
+
+        // Show Dashboard button, hide Get App button
+        document.getElementById('navDashboardBtn').style.display = '';
+        document.getElementById('navGetAppBtn').style.display = 'none';
+      } else {
+        // Show login/signup form
+        document.getElementById('auth-form').parentElement.style.display = '';
+
+        // Hide Dashboard button, show Get App button
+        document.getElementById('navDashboardBtn').style.display = 'none';
+        document.getElementById('navGetAppBtn').style.display = '';
+      }
+
+      renderAuthForm();
+      renderFeatureCards();
+      renderFeaturePanel();
+      renderTeam();
+      renderContactForm();
+    }
+
+    // Initialize on page load
+    initializePage();
+
+    // Re-check on page visibility change
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden) {
+        initializePage();
+      }
+    });
+  </script>
 </body>
 </html>
