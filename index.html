@@ -70,6 +70,7 @@
     }
     .nav-pill:hover { background: rgba(255,255,255,0.15); }
     .nav-pill.active { background: rgba(224,32,32,0.85); }
+    .nav-pill:focus { outline: none; background: rgba(224,32,32,0.85); }
     .nav-cta {
       background: #e02020; color: #fff; border: none;
       padding: 10px 24px; border-radius: 28px; font-weight: 700;
@@ -690,7 +691,7 @@
 
   <!-- Mobile Menu Drawer -->
   <div class="mobile-menu" id="mobile-menu">
-    <button class="nav-pill active" id="mnav-home"     onclick="closeMenu(); window.scrollTo({top:0,behavior:'smooth'})">Home</button>
+    <button class="nav-pill active" id="mnav-home"     onclick="closeMenu(); document.documentElement.scrollTop=0; document.body.scrollTop=0;">Home</button>
     <button class="nav-pill"        id="mnav-features" onclick="closeMenu(); document.getElementById('features')?.scrollIntoView({behavior:'smooth'})">Features</button>
     <button class="nav-pill"        id="mnav-about"    onclick="closeMenu(); document.getElementById('about')?.scrollIntoView({behavior:'smooth'})">About</button>
     <button class="nav-pill"        id="mnav-contact"  onclick="closeMenu(); document.getElementById('contact')?.scrollIntoView({behavior:'smooth'})">Contact</button>
@@ -702,7 +703,7 @@
       Quick<span>Pull</span>
     </a>
     <div class="nav-links">
-      <button class="nav-pill active" id="nav-home"     onclick="window.scrollTo({top:0,behavior:'smooth'}); this.setAttribute('aria-current','true');">Home</button>
+      <button class="nav-pill active" id="nav-home"     onclick="document.documentElement.scrollTop=0; document.body.scrollTop=0;">Home</button>
       <button class="nav-pill"        id="nav-features" onclick="document.getElementById('features')?.scrollIntoView({behavior:'smooth'})">Features</button>
       <button class="nav-pill"        id="nav-about"    onclick="document.getElementById('about')?.scrollIntoView({behavior:'smooth'})">About</button>
       <button class="nav-pill"        id="nav-contact"  onclick="document.getElementById('contact')?.scrollIntoView({behavior:'smooth'})">Contact</button>
