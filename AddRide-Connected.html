@@ -402,6 +402,20 @@
 
             // Setup Socket.io listeners for real-time message updates
             setupSocketListeners();
+
+            // Add auto-refresh fallback every 10 seconds if trip is active
+            setInterval(async () => {
+                const activeTripId = localStorage.getItem('activeTrip');
+                const tripFormHidden = document.getElementById('tripForm').classList.contains('hidden');
+                if (activeTripId && tripFormHidden) {
+                    console.log('[DEBUG] Auto-refreshing trip data...');
+                    try {
+                        await loadActiveTrip();
+                    } catch (err) {
+                        console.error('[DEBUG] Error in auto-refresh:', err);
+                    }
+                }
+            }, 10000);
         });
 
         // Setup Socket.io listeners for messages
@@ -512,7 +526,29 @@
                     };
                     console.log('[LOCATION] Stored in window.driverLocations[' + data.tripId + ']:', window.driverLocations[data.tripId]);
                 });
-            }, 500);
+
+                // Listen for rider cancellations
+                socket.on('rider-cancelled-trip', async (data) => {
+                    console.log('[DEBUG] Rider cancelled trip event:', data);
+                    const activeTripId = localStorage.getItem('activeTrip');
+
+                    // If this is for our active trip, reload immediately
+                    if (activeTripId && data.tripId === activeTripId) {
+                        console.log('[DEBUG] Reloading trip due to rider cancellation');
+                        showNotification('Rider cancelled their request', 'info');
+
+                        // Small delay to ensure backend processed the cancellation
+                        setTimeout(async () => {
+                            try {
+                                await loadActiveTrip(); // This will refresh the rider list
+                                console.log('[DEBUG] Trip reloaded successfully');
+                            } catch(err) {
+                                console.error('[DEBUG] Error reloading trip:', err);
+                            }
+                        }, 300);
+                    }
+                });
+            }, 100);
         }
 
         // Populate profile email in dropdown
@@ -805,6 +841,8 @@
                         displayRiderRequests(trip.riders, trip);
                     } else {
                         console.log('[DEBUG] No rider requests yet');
+                        // Update count to 0
+                        document.getElementById('requestCount').textContent = '0';
                         document.getElementById('riderRequestsList').innerHTML = `
                             <div class="text-center py-8 text-gray-500">
                                 <i class="fas fa-inbox text-4xl text-gray-300 mb-2"></i>
@@ -911,6 +949,15 @@
                             </button>
                         </div>
                     `;
+                } else if (riderStatus === 'cancelled') {
+                    // Cancelled rider - show rejected badge only
+                    actionButtonsHTML = `
+                        <div class="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:gap-3 sm:items-center">
+                            <span class="px-3 sm:px-4 py-2 bg-red-100 text-red-700 rounded-full text-xs sm:text-sm font-bold border-2 border-red-400 flex items-center justify-center gap-2 whitespace-nowrap sm:w-auto">
+                                <i class="fas fa-times-circle"></i>Rejected
+                            </span>
+                        </div>
+                    `;
                 } else {
                     // Pending rider - show distance, map, accept, and reject buttons
                     actionButtonsHTML = `
@@ -929,7 +976,7 @@
                 }
 
                 return `
-                <div class="bg-blue-50 border-2 border-blue-200 p-3 sm:p-4 rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 transition-all duration-300 ${riderStatus === 'confirmed' ? 'border-green-400 bg-green-50' : ''}">
+                <div class="bg-blue-50 border-2 border-blue-200 p-3 sm:p-4 rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 transition-all duration-300 ${riderStatus === 'confirmed' ? 'border-green-400 bg-green-50' : riderStatus === 'cancelled' ? 'border-red-400 bg-red-50' : ''}" data-rider-id="${rider._id}">
                     <div class="min-w-0">
                         <h4 class="font-bold text-sm sm:text-base text-gray-900">${riderName}</h4>
                         <p class="text-xs sm:text-sm text-gray-600 mt-1">Fare: ₹${rider.fare || 'TBD'}</p>
@@ -1458,14 +1505,19 @@
                 'info': 'bg-blue-500'
             }[type];
 
-            notification.className = `fixed top-4 right-4 ${bgColor} text-white p-4 rounded-lg shadow-lg z-50`;
-            notification.textContent = message;
+            notification.className = `fixed top-4 right-4 ${bgColor} text-white p-4 rounded-lg shadow-lg z-50 flex items-center justify-between gap-3 max-w-sm`;
+            notification.innerHTML = `
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" class="flex-shrink-0 hover:bg-black/20 p-1 rounded transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
 
             document.body.appendChild(notification);
 
             setTimeout(() => {
-                notification.remove();
-            }, 3000);
+                if (notification.parentElement) notification.remove();
+            }, 5000);
         }
 
         // Map modal variables

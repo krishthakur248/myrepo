@@ -1085,6 +1085,9 @@
                         <button onclick="contactDriver('${trip._id}', '${trip.driver.firstName}')" class="flex-1 bg-secondary/20 hover:bg-secondary/30 text-secondary text-[9px] font-bold py-1 rounded transition-all">
                             Message
                         </button>` : ''}
+                        <button onclick="cancelTrip('${trip._id}', '${trip.driver.firstName} ${trip.driver.lastName}')" class="flex-1 bg-red-600/30 hover:bg-red-600/40 text-red-400 text-[9px] font-bold py-1 rounded transition-all">
+                            Cancel
+                        </button>
                     </div>
                 </div>
                 `;
@@ -1802,17 +1805,22 @@
                 'warning': 'bg-yellow-600'
             }[type] || 'bg-gray-600';
 
-            notification.className = `${bgColor} text-white p-4 rounded-lg shadow-lg max-w-sm flex items-center gap-2`;
+            notification.className = `${bgColor} text-white p-4 rounded-lg shadow-lg max-w-sm flex items-center justify-between gap-3`;
             notification.innerHTML = `
-                <span class="material-symbols-outlined text-[20px]">${type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info'}</span>
-                <span>${message}</span>
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[20px]">${type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info'}</span>
+                    <span>${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" class="flex-shrink-0 p-1 hover:bg-black/10 rounded transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
             `;
 
             container.appendChild(notification);
 
             setTimeout(() => {
-                notification.remove();
-            }, 3000);
+                if (notification.parentElement) notification.remove();
+            }, 5000);
         }
 
         // Show driver details modal
@@ -1934,6 +1942,44 @@
             } catch (error) {
                 console.error('Error cancelling request:', error);
                 showNotification('Error cancelling request', 'error');
+            }
+        }
+
+        // Cancel active trip (removes rider from trip)
+        async function cancelTrip(tripId, driverName) {
+            if (!confirm('Are you sure you want to cancel this trip?')) {
+                return;
+            }
+
+            try {
+                const currentUserId = AuthService.getCurrentUser()._id;
+                const response = await apiClient.delete(`/trips/${tripId}/cancel-rider`, {
+                    riderId: currentUserId
+                });
+
+                if (response && response.success) {
+                    showNotification('✓ Trip cancelled successfully', 'success');
+
+                    // Emit socket event to notify driver in real-time
+                    if (window.riderSocket) {
+                        window.riderSocket.emit('rider-cancelled-trip', {
+                            tripId: tripId,
+                            riderId: currentUserId,
+                            driverName: driverName
+                        });
+                    }
+
+                    // Reload trips after a brief delay
+                    setTimeout(async () => {
+                        await loadAcceptedRides();
+                        searchRides(); // Refresh available rides
+                    }, 500);
+                } else {
+                    showNotification('Error cancelling trip', 'error');
+                }
+            } catch (error) {
+                console.error('Error cancelling trip:', error);
+                showNotification('Error cancelling trip', 'error');
             }
         }
 
