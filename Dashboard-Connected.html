@@ -1243,7 +1243,7 @@
                 messagesContainer.innerHTML = '<div class="text-[#92adc9] text-center py-4">Loading messages...</div>';
 
                 // Call API to get messages
-                const response = await fetch(`http://localhost:5001/api/messages/trip/${tripId}`, {
+                const response = await fetch(`https://myrepo-7dfw.onrender.com/api/messages/trip/${tripId}`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
