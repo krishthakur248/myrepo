@@ -531,6 +531,7 @@
     <script src="auth-service.js"></script>
     <script src="trip-service.js"></script>
     <script src="trip-service-api.js"></script>
+    <script src="message-service.js"></script>
     <script src="notification-manager.js"></script>
 
     <script>
@@ -1700,13 +1701,13 @@
         function calculateTripDistance(trip) {
             try {
                 console.log('[Distance] Starting calculation for trip:', trip._id);
-                
+
                 // First check if trip has distance field
                 if (trip.distance) {
                     console.log('[Distance] Using trip.distance:', trip.distance);
                     return trip.distance.toFixed(2);
                 }
-                
+
                 // Check if trip has route data with distance
                 if (trip.route && Array.isArray(trip.route) && trip.route.length > 0) {
                     console.log('[Distance] Calculating from route points...');
