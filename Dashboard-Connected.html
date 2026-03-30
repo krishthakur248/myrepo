@@ -545,6 +545,8 @@
         let selectedMapLocation = null;
         let destinationMarker = null;
         let riderTripFare = 0; // Store the calculated fare based on rider's distance
+        let currentRideFare = 0; // Store the fare for the currently selected ride in the modal
+        let lastRiderDistance = 0; // Store the last calculated rider distance for fare calculation
         let acceptedRides = []; // Store accepted rides for modal functions
 
         window.addEventListener('DOMContentLoaded', async () => {
@@ -588,6 +590,33 @@
                 });
             }
         });
+
+        // Calculate fare based on vehicle type and distance
+        function calculateFare(distance, vehicleType) {
+            // Default to 'car' if vehicle type is not specified
+            const type = (vehicleType || 'car').toLowerCase();
+            const minimumFare = 40; // Minimum base fare
+
+            let ratePerKm;
+            switch(type) {
+                case 'bike':
+                case 'motorcycle':
+                    ratePerKm = 20; // ₹20 per km for bikes
+                    break;
+                case 'ev':
+                case 'electric':
+                    ratePerKm = 40; // ₹40 per km for EV
+                    break;
+                case 'car':
+                default:
+                    ratePerKm = 30; // ₹30 per km for cars
+            }
+
+            const calculatedFare = Math.round(distance * ratePerKm);
+            const fare = Math.max(calculatedFare, minimumFare); // Apply minimum base fare
+            console.log(`[Fare] Vehicle: ${type}, Distance: ${distance.toFixed(2)}km, Rate: ₹${ratePerKm}/km, Calculated: ₹${calculatedFare}, Final: ₹${fare}`);
+            return fare;
+        }
 
         // Calculate distance between two coordinates using Haversine formula
         function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -642,8 +671,8 @@
                 }
             });
 
-            // Re-render rides with updated distances
-            displayRides(window.availableRides);
+            // Re-render rides with updated distances, using the stored rider distance
+            displayRides(window.availableRides, lastRiderDistance);
         }
 
         async function getUserLocation() {
@@ -795,6 +824,7 @@
                 console.log('Destination updated to:', destinationLocation);
 
                 // Calculate and show preview of fare
+                // Note: Preview uses default car rate since we don't know the vehicle type yet
                 const startLocation = pickupLocation || userLocation;
                 if (startLocation && destinationLocation) {
                     const previewDistance = calculateDistance(
@@ -803,7 +833,7 @@
                         destinationLocation.lat,
                         destinationLocation.lng
                     );
-                    const previewFare = Math.round(previewDistance * 10);
+                    const previewFare = calculateFare(previewDistance, 'car'); // Default to car for preview
                     console.log(`[DEBUG] Preview: ${previewDistance.toFixed(2)} km = ₹${previewFare}`);
                     showNotification(`✓ Destination set (${previewDistance.toFixed(2)} km, ≈ ₹${previewFare})`, 'success');
                 } else {
@@ -856,13 +886,16 @@
                     destinationLocation.lng
                 );
 
-                // Calculate fare based on distance: 1 KM = ₹10
-                riderTripFare = Math.round(riderDistance * 10);
+                // Store the distance globally for use in updatePickupDistances
+                lastRiderDistance = riderDistance;
+
+                // Calculate fare based on distance (will be calculated per ride based on vehicle type)
+                riderTripFare = 0; // Will be calculated for each ride individually
 
                 console.log('Destination:', destinationLocation);
                 console.log('User Location:', userLocation);
                 console.log('Rider Distance Calculated:', riderDistance);
-                console.log('Rider Fare Calculated:', riderTripFare);
+                console.log('Note: Fare will be calculated for each ride based on vehicle type');
                 console.log('Search params:', {
                     pickup: [userLocation.lng, userLocation.lat],
                     dropoff: [destinationLocation.lng, destinationLocation.lat],
@@ -879,7 +912,7 @@
 
                 if (response && response.matches && response.matches.length > 0) {
                     console.log('Displaying rides with fare:', riderTripFare);
-                    displayRides(response.matches);
+                    displayRides(response.matches, riderDistance);
                 } else {
                     ridesList.innerHTML = '<div class="text-center py-8 text-[#92adc9]"><span class="material-symbols-outlined text-4xl block mb-2 opacity-50">search_off</span><p>No matching rides found</p><p class="text-xs mt-2">Try a different destination or create a ride instead!</p></div>';
                 }
@@ -890,9 +923,11 @@
             }
         }
 
-        function displayRides(rides) {
+        function displayRides(rides, riderDistance) {
             const ridesList = document.getElementById('ridesList');
             document.getElementById('matchCount').textContent = rides.length + ' Found';
+
+            console.log('[DEBUG] displayRides - riderDistance:', riderDistance);
 
             if (!rides || rides.length === 0) {
                 ridesList.innerHTML = '<div class="text-center py-8 text-[#92adc9]">No rides available</div>';
@@ -907,7 +942,11 @@
             console.log('Current user ID:', currentUserId);
 
             ridesList.innerHTML = rides.map((ride, index) => {
-                const fareAmount = riderTripFare || 0;
+                // Calculate fare for this specific ride based on vehicle type
+                const vehicleType = (ride.vehicle || ride.driver?.vehicle || 'car').toLowerCase();
+                console.log(`[FARE_DEBUG] Ride ${index}: riderDistance=${riderDistance}, vehicleType=${vehicleType}`);
+                const fareAmount = calculateFare(riderDistance, vehicleType);
+                console.log(`[FARE_DEBUG] Ride ${index}: fareAmount=${fareAmount}`);
 
                 // Check if current user has already sent a request to this trip
                 let myRequest = null;
@@ -1625,6 +1664,7 @@
 
         function openJoinRideModal(rideId, driverName, baseFare, availableSeats, occupiedSeats, matchScore) {
             selectedRideForJoin = rideId;
+            currentRideFare = baseFare; // Store the fare for this ride
 
             document.getElementById('joinRideContent').innerHTML = `
                 <div class="bg-[#151f2a] p-3 rounded-xl space-y-2">
@@ -1638,7 +1678,7 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-[#92adc9]">Your Fare:</span>
-                        <span class="text-secondary font-bold">₹${riderTripFare}</span>
+                        <span class="text-secondary font-bold">₹${baseFare}</span>
                     </div>
                 </div>
             `;
@@ -1671,7 +1711,7 @@
                     selectedRideForJoin,
                     [pickupPoint.lng, pickupPoint.lat],
                     [destinationLocation.lng, destinationLocation.lat],
-                    riderTripFare
+                    currentRideFare
                 );
 
                 if (response && response.success) {
