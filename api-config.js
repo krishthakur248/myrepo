@@ -1,5 +1,7 @@
-// API Configuration
-const API_BASE_URL = 'https://myrepo-7dfw.onrender.com/api';
+// API Configuration - UPDATE THIS VARIABLE WHEN YOUR RENDER LINK CHANGES
+const RENDER_SERVER_URL = 'https://myrepo-6n3c.onrender.com';
+const API_BASE_URL = `${RENDER_SERVER_URL}/api`;
+const SOCKET_SERVER_URL = RENDER_SERVER_URL; // For Socket.io connections
 
 const API_ENDPOINTS = {
   // Authentication

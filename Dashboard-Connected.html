@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Car Pulling - Dashboard</title>
@@ -525,6 +526,7 @@
     <div id="notificationContainer" class="fixed top-24 right-4 space-y-2 z-50"></div>
 
     <!-- Scripts -->
+    <script src="api-config.js"></script>
     <script src="api-client.js"></script>
     <script src="auth-service.js"></script>
     <script src="trip-service.js"></script>
@@ -1242,20 +1244,9 @@
                 const messagesContainer = document.getElementById('messagesContainer');
                 messagesContainer.innerHTML = '<div class="text-[#92adc9] text-center py-4">Loading messages...</div>';
 
-                // Call API to get messages
-                const response = await fetch(`https://myrepo-7dfw.onrender.com/api/messages/trip/${tripId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+                // Call API to get messages (uses MessageService with config base URL)
+                const data = await MessageService.getMessages(tripId);
 
-                if (!response.ok) {
-                    throw new Error('Failed to load messages');
-                }
-
-                const data = await response.json();
                 const messages = data.messages || [];
 
                 if (messages.length === 0) {
@@ -1301,22 +1292,12 @@
             }
 
             try {
-                const response = await fetch('https://myrepo-7dfw.onrender.com/api/messages/send', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        tripId: window.currentMessagingTrip,
-                        recipientId: window.currentMessagingDriver,
-                        messageText: message
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to send message');
-                }
+                // Use MessageService to send (uses config base URL)
+                const response = await MessageService.sendMessage(
+                    window.currentMessagingTrip,
+                    window.currentMessagingDriver,
+                    message
+                );
 
                 // Clear input and reload messages
                 messageInput.value = '';
@@ -1987,7 +1968,7 @@
         function setupSocketListeners() {
             // Connect to Socket.io server
             const token = apiClient.getToken();
-            const socket = io('https://myrepo-7dfw.onrender.com', {
+            const socket = io(SOCKET_SERVER_URL, {
                 auth: {
                     token: token
                 }

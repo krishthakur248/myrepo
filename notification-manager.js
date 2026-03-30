@@ -8,8 +8,8 @@ class NotificationManager {
     static initializeSocket() {
         if (this.socket) return; // Already initialized
 
-        // Connect to Socket.io server
-        const socketUrl = 'https://myrepo-7dfw.onrender.com';
+        // Connect to Socket.io server (uses SOCKET_SERVER_URL from api-config.js)
+        const socketUrl = SOCKET_SERVER_URL;
 
         // Using Socket.io client library (added via CDN)
         if (typeof io !== 'undefined') {

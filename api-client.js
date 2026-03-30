@@ -1,7 +1,8 @@
 // API Client - Handles all HTTP requests
 class APIClient {
-  constructor(baseURL = 'https://myrepo-7dfw.onrender.com/api') {
-    this.baseURL = baseURL;
+  constructor(baseURL) {
+    // Use config URL if provided, otherwise fall back to api-config.js or use default
+    this.baseURL = baseURL || (typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : 'https://myrepo-6n3c.onrender.com/api');
   }
 
   // Get token from localStorage
@@ -152,5 +153,5 @@ class APIClient {
   }
 }
 
-// Create global API client instance
-const apiClient = new APIClient('https://myrepo-7dfw.onrender.com/api');
+// Create global API client instance (uses config from api-config.js)
+const apiClient = new APIClient();

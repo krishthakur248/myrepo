@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Car Pulling - Offer a Ride</title>
@@ -367,6 +368,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="api-config.js"></script>
     <script src="api-client.js"></script>
     <script src="auth-service.js"></script>
     <script src="trip-service.js"></script>
@@ -422,7 +424,7 @@
         function setupSocketListeners() {
             // Use a small delay to ensure NotificationManager socket is initialized
             setTimeout(() => {
-                const socket = io('https://myrepo-7dfw.onrender.com', {
+                const socket = io(SOCKET_SERVER_URL, {
                     auth: {
                         token: apiClient.getToken()
                     }
