@@ -778,8 +778,9 @@
                 pickerMap.on('click', (e) => {
                     selectedMapLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
 
+                    // Remove all existing markers and circle markers
                     pickerMap.eachLayer((layer) => {
-                        if (layer instanceof L.Marker) {
+                        if (layer instanceof L.Marker || layer instanceof L.CircleMarker) {
                             pickerMap.removeLayer(layer);
                         }
                     });
@@ -823,8 +824,7 @@
                 document.getElementById('destLng').value = selectedMapLocation.lng.toFixed(6);
                 console.log('Destination updated to:', destinationLocation);
 
-                // Calculate and show preview of fare
-                // Note: Preview uses default car rate since we don't know the vehicle type yet
+                // Calculate distance but don't show fare preview (depends on vehicle type)
                 const startLocation = pickupLocation || userLocation;
                 if (startLocation && destinationLocation) {
                     const previewDistance = calculateDistance(
@@ -833,9 +833,8 @@
                         destinationLocation.lat,
                         destinationLocation.lng
                     );
-                    const previewFare = calculateFare(previewDistance, 'car'); // Default to car for preview
-                    console.log(`[DEBUG] Preview: ${previewDistance.toFixed(2)} km = ₹${previewFare}`);
-                    showNotification(`✓ Destination set (${previewDistance.toFixed(2)} km, ≈ ₹${previewFare})`, 'success');
+                    console.log(`[DEBUG] Destination distance: ${previewDistance.toFixed(2)} km`);
+                    showNotification(`✓ Destination set (${previewDistance.toFixed(2)} km)`, 'success');
                 } else {
                     showNotification('✓ Destination set', 'success');
                 }

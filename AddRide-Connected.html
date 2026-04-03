@@ -1563,10 +1563,10 @@
                     selectedMapLat = e.latlng.lat;
                     selectedMapLng = e.latlng.lng;
 
-                    // Remove old marker
-                    document.querySelectorAll('.leaflet-marker-icon').forEach(marker => {
-                        if (marker.parentElement.classList.contains('custom-marker')) {
-                            marker.parentElement.remove();
+                    // Remove all existing markers and circle markers
+                    mapInstance.eachLayer((layer) => {
+                        if (layer instanceof L.Marker || layer instanceof L.CircleMarker) {
+                            mapInstance.removeLayer(layer);
                         }
                     });
 
