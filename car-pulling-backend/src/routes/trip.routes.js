@@ -6,6 +6,9 @@ const { verifyToken } = require('../middleware/auth');
 // All trip routes require authentication
 router.use(verifyToken);
 
+// TEST: Simple endpoint to verify matching is working
+router.get('/test/check-trips', tripController.getAllTrips);
+
 // Debug: Get all active trips
 router.get('/debug/active-trips', tripController.getAllTrips);
 
