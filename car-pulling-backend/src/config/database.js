@@ -5,6 +5,8 @@ const connectDB = async () => {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // Fail fast instead of hanging
+      socketTimeoutMS: 5000,
     });
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
@@ -18,7 +20,10 @@ const connectDB = async () => {
     return conn;
   } catch (error) {
     console.error(`❌ Error connecting to MongoDB: ${error.message}`);
-    process.exit(1);
+    console.warn('⚠️  MongoDB not available. Backend will continue running.');
+    console.warn('⚠️  Frontend will automatically fall back to Render server.');
+    // Don't crash - allow backend to start so health check works
+    return null;
   }
 };
 

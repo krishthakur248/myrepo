@@ -6,6 +6,9 @@ const { verifyToken } = require('../middleware/auth');
 // All trip routes require authentication
 router.use(verifyToken);
 
+// Debug: Get all active trips
+router.get('/debug/active-trips', tripController.getAllTrips);
+
 // Specific routes first (before parameter routes)
 // Get all trips created by driver
 router.get('/driver/my-trips', tripController.getDriverTrips);

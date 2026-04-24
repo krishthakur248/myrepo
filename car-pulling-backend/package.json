@@ -20,7 +20,9 @@
     "cors": "^2.8.5",
     "socket.io": "^4.5.0",
     "validator": "^13.9.0",
-    "axios": "^1.4.0"
+    "axios": "^1.4.0",
+    "@turf/turf": "^6.5.0",
+    "h3-js": "^4.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

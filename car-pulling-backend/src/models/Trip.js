@@ -49,6 +49,18 @@ const tripSchema = new mongoose.Schema(
       },
     ],
 
+    // Real-time Route History (for advanced matching algorithm)
+    routeHistory: [
+      {
+        latitude: Number,
+        longitude: Number,
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
     // Trip Status
     status: {
       type: String,

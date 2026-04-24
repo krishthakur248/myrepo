@@ -158,6 +158,24 @@ io.on('connection', (socket) => {
     const { tripId, latitude, longitude } = data;
     console.log(`[DEBUG] Location update from user ${userId}: Trip ${tripId}, Lat: ${latitude}, Lng: ${longitude}`);
 
+    // Store route history in Trip model for advanced matching
+    if (tripId && latitude && longitude) {
+      const Trip = require('./models/Trip');
+      Trip.findByIdAndUpdate(
+        tripId,
+        {
+          $push: {
+            routeHistory: {
+              latitude,
+              longitude,
+              timestamp: new Date()
+            }
+          }
+        },
+        { new: true }
+      ).catch(err => console.error('[GPS-HISTORY] Error saving route:', err.message));
+    }
+
     // Emit to all users in the trip room (for ongoing trips)
     io.to(`trip_${tripId}`).emit('location-updated', {
       userId: userId,

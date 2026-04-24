@@ -532,6 +532,7 @@
     <script src="trip-service.js"></script>
     <script src="trip-service-api.js"></script>
     <script src="message-service.js"></script>
+    <script src="matchingService.js"></script>
     <script src="notification-manager.js"></script>
 
     <script>
@@ -874,8 +875,14 @@
                     return;
                 }
 
+                // **NEW: Start GPS streaming for real-time matching**
+                if (matchingService && matchingService.initializeSocket) {
+                    matchingService.initializeSocket();
+                    console.log('[SEARCH] Initialized Socket.IO for real-time matching');
+                }
+
                 const ridesList = document.getElementById('ridesList');
-                ridesList.innerHTML = '<div class="text-center py-8"><div class="loading-spinner mx-auto mb-2"></div><p class="text-[#92adc9]">Searching for rides...</p></div>';
+                ridesList.innerHTML = '<div class="text-center py-8"><div class="loading-spinner mx-auto mb-2"></div><p class="text-[#92adc9]">🔍 Searching for rides...</p><p class="text-xs text-[#5a7d99] mt-2">Real-time matching in progress...</p></div>';
 
                 // Calculate the distance between rider's pickup and dropoff
                 const riderDistance = calculateDistance(
@@ -891,11 +898,10 @@
                 // Calculate fare based on distance (will be calculated per ride based on vehicle type)
                 riderTripFare = 0; // Will be calculated for each ride individually
 
-                console.log('Destination:', destinationLocation);
-                console.log('User Location:', userLocation);
-                console.log('Rider Distance Calculated:', riderDistance);
-                console.log('Note: Fare will be calculated for each ride based on vehicle type');
-                console.log('Search params:', {
+                console.log('🚗 [SEARCH-RIDES] Destination:', destinationLocation);
+                console.log('📍 [SEARCH-RIDES] User Location:', userLocation);
+                console.log('📏 [SEARCH-RIDES] Rider Distance:', riderDistance.toFixed(2) + ' km');
+                console.log('[SEARCH-RIDES] Search params:', {
                     pickup: [userLocation.lng, userLocation.lat],
                     dropoff: [destinationLocation.lng, destinationLocation.lat],
                     riderDistance: riderDistance.toFixed(2),
@@ -907,16 +913,23 @@
                     [destinationLocation.lng, destinationLocation.lat]
                 );
 
-                console.log('Search response:', response);
+                console.log('✅ [SEARCH-RESPONSE] Found matches:', response.matches?.length || 0);
 
                 if (response && response.matches && response.matches.length > 0) {
-                    console.log('Displaying rides with fare:', riderTripFare);
+                    console.log('📋 [DISPLAY-RIDES] Displaying rides with fare:', riderTripFare);
                     displayRides(response.matches, riderDistance);
+
+                    // **NEW: Start GPS streaming for first matched trip**
+                    if (response.matches.length > 0 && matchingService) {
+                        const firstTripId = response.matches[0]._id;
+                        matchingService.startGpsStreaming(firstTripId);
+                        console.log('[GPS-STREAM] Started GPS tracking for top match');
+                    }
                 } else {
                     ridesList.innerHTML = '<div class="text-center py-8 text-[#92adc9]"><span class="material-symbols-outlined text-4xl block mb-2 opacity-50">search_off</span><p>No matching rides found</p><p class="text-xs mt-2">Try a different destination or create a ride instead!</p></div>';
                 }
             } catch (error) {
-                console.error('Error searching rides:', error);
+                console.error('❌ Error searching rides:', error);
                 showNotification('Error searching rides: ' + error.message, 'error');
                 document.getElementById('ridesList').innerHTML = '<p class="text-red-400 text-center py-4">Error loading rides. Check console for details.</p>';
             }
