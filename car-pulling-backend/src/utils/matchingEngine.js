@@ -156,8 +156,8 @@ function getSpatialOverlapSegment(driverCoords, passengerCoords) {
     const pickupLocKm  = nearestPickup.properties.location  || 0;
     const dropoffLocKm = nearestDropoff.properties.location || 0;
 
-    // Generous buffer — real-world roads curve, so 800 m is reasonable
-    const MAX_DETOUR_M = 800;
+    // Rider typically selects a point on the road, so 350m is sufficient
+    const MAX_DETOUR_M = 350;
 
     console.log(`[OVERLAP] 🎯 Rider PICKUP  : ${pickupDistMeters.toFixed(0)}m from driver route (at ${pickupLocKm.toFixed(3)}km along driver route)`);
     console.log(`[OVERLAP] 🎯 Rider DROPOFF : ${dropoffDistMeters.toFixed(0)}m from driver route (at ${dropoffLocKm.toFixed(3)}km along driver route)`);

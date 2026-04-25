@@ -11,7 +11,7 @@
 // Configuration
 const ROUTE_MATCHING_CONFIG = {
   OSRM_API: 'https://router.project-osrm.org/route/v1/driving',
-  PICKUP_DROPOFF_BUFFER_M: 800,        // 800 meters (real-world roads curve)
+  PICKUP_DROPOFF_BUFFER_M: 350,        // 350 meters (rider selects on road)
   OVERLAP_TOLERANCE_M: 25,             // 25 meters (kept for reference)
   MIN_OVERLAP_RATIO: 0.20,             // 20% minimum overlap
   DIRECTION_TOLERANCE_DEG: 60,         // 60 degree tolerance for direction
