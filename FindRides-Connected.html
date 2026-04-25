@@ -301,6 +301,10 @@
             const dropoffLat = parseFloat(document.getElementById('dropoffLat').value);
             const dropoffLng = parseFloat(document.getElementById('dropoffLng').value);
 
+            console.log('[SEARCH] ==== handleSearch called ====');
+            console.log('[SEARCH] pickupLat:', pickupLat, 'pickupLng:', pickupLng);
+            console.log('[SEARCH] dropoffLat:', dropoffLat, 'dropoffLng:', dropoffLng);
+
             // Validate
             if (!pickupLat || !pickupLng) {
                 showError('Please set pickup location');
@@ -316,18 +320,31 @@
             document.getElementById('loadingState').classList.remove('hidden');
             document.getElementById('resultsSection').classList.add('hidden');
 
+            const requestBody = {
+                pickupLocation:  { type: 'Point', coordinates: [pickupLng, pickupLat] },
+                dropoffLocation: { type: 'Point', coordinates: [dropoffLng, dropoffLat] },
+                maxDistance: 10
+            };
+            console.log('[SEARCH] Sending to backend:', JSON.stringify(requestBody));
+
             try {
                 const response = await TripServiceAPI.findMatches(
-                    { type: 'Point', coordinates: [pickupLng, pickupLat] },
-                    { type: 'Point', coordinates: [dropoffLng, dropoffLat] },
-                    5
+                    requestBody.pickupLocation,
+                    requestBody.dropoffLocation,
+                    10
                 );
+
+                console.log('[SEARCH] Backend response:', JSON.stringify(response));
+                alert('[DEBUG] Response: ' + (response.message || 'unknown') + ' — Matches: ' + (response.matches ? response.matches.length : 0));
 
                 currentMatches = response.matches || [];
                 displayResults();
 
             } catch (error) {
-                console.error('Search error:', error);
+                console.error('[SEARCH] Error:', error);
+                console.error('[SEARCH] Error status:', error.status);
+                console.error('[SEARCH] Error data:', JSON.stringify(error.data));
+                alert('[DEBUG] Search ERROR: ' + error.message + ' (status: ' + (error.status || 'none') + ')');
                 showError(error.message || 'Error searching for rides');
             } finally {
                 document.getElementById('loadingState').classList.add('hidden');
