@@ -106,46 +106,98 @@ function toLine(coords) {
 }
 
 /**
- * Get overlapping segment: Find passenger coords within 500m of driver route
- * Focus: Path overlap detection for ride-sharing matching
+ * Get overlapping segment: Validate passenger route is subset of driver route
+ * CRITICAL: Must check that BOTH pickup and dropoff are on driver's path in correct order
  * @param {Array} driverCoords - Driver route [[lat, lng], ...]
  * @param {Array} passengerCoords - Passenger route [[lat, lng], ...]
- * @returns {Array|null} Overlapping point coordinates or null
+ * @returns {Object|null} { pickupDist, dropoffDist, overlapCoords } or null if invalid
  */
 function getSpatialOverlapSegment(driverCoords, passengerCoords) {
   try {
+    if (!driverCoords || !passengerCoords || driverCoords.length < 2 || passengerCoords.length < 2) {
+      console.log('[OVERLAP] ❌ Invalid route coordinates');
+      return null;
+    }
+
     const driverLine = toLine(driverCoords);
     if (!driverLine) {
       console.log('[OVERLAP] ❌ Could not create driver line');
       return null;
     }
 
-    // Buffer driver route by 500 meters (0.5km)
-    // Covers paths in same geographical area
-    const BUFFER_KM = 0.5; // 500 meters in km
-    const buffered = turf.buffer(driverLine, BUFFER_KM, { units: 'kilometers' });
-    console.log(`[OVERLAP] 📦 Created buffer: ${BUFFER_KM * 1000}m around driver route`);
+    // ===== CRITICAL VALIDATION =====
+    // 1. CHECK PASSENGER START (PICKUP) IS ON DRIVER ROUTE
+    const passengerStart = passengerCoords[0];
+    const passengerEnd = passengerCoords[passengerCoords.length - 1];
 
-    // Find passenger points inside the buffer
-    const overlappingPoints = passengerCoords.filter(([lat, lng]) => {
-      try {
-        const pt = turf.point([lng, lat]);
-        const inBuffer = turf.booleanPointInPolygon(pt, buffered);
-        return inBuffer;
-      } catch (e) {
-        return false;
-      }
-    });
+    const pickupPoint = turf.point([passengerStart[1], passengerStart[0]]);
+    const dropoffPoint = turf.point([passengerEnd[1], passengerEnd[0]]);
 
-    console.log(`[OVERLAP] 📍 Checked ${passengerCoords.length} passenger route points, found ${overlappingPoints.length} within ${BUFFER_KM * 1000}m buffer`);
+    const nearestPickup = turf.nearestPointOnLine(driverLine, pickupPoint);
+    const nearestDropoff = turf.nearestPointOnLine(driverLine, dropoffPoint);
 
-    if (overlappingPoints.length < 1) {
-      console.log('[OVERLAP] ❌ No path overlap - routes do not intersect within buffer');
-      return null; // Need at least 1 point to match
+    const pickupDistMeters = nearestPickup.properties.dist * 1000; // Convert km to m
+    const dropoffDistMeters = nearestDropoff.properties.dist * 1000;
+    const pickupLocationOnDriver = nearestPickup.properties.location;
+    const dropoffLocationOnDriver = nearestDropoff.properties.location;
+
+    const MAX_DETOUR_M = 500; // Maximum detour allowed
+
+    console.log(`[OVERLAP] 🎯 Passenger PICKUP: ${pickupDistMeters.toFixed(0)}m from driver route`);
+    console.log(`[OVERLAP] 🎯 Passenger DROPOFF: ${dropoffDistMeters.toFixed(0)}m from driver route`);
+
+    // Check pickup is close enough
+    if (pickupDistMeters > MAX_DETOUR_M) {
+      console.log(`[OVERLAP] ❌ PICKUP TOO FAR: ${pickupDistMeters.toFixed(0)}m > ${MAX_DETOUR_M}m`);
+      return null;
     }
 
-    console.log(`[OVERLAP] ✅ Path overlap detected: ${overlappingPoints.length} points in common`);
-    return overlappingPoints;
+    // Check dropoff is close enough
+    if (dropoffDistMeters > MAX_DETOUR_M) {
+      console.log(`[OVERLAP] ❌ DROPOFF TOO FAR: ${dropoffDistMeters.toFixed(0)}m > ${MAX_DETOUR_M}m`);
+      return null;
+    }
+
+    // ===== CRITICAL: CHECK ORDER =====
+    // Pickup must occur BEFORE dropoff on driver's route
+    if (pickupLocationOnDriver > dropoffLocationOnDriver) {
+      console.log(`[OVERLAP] ❌ WRONG ORDER: Pickup at ${pickupLocationOnDriver.toFixed(1)}km, Dropoff at ${dropoffLocationOnDriver.toFixed(1)}km (reversed!)`);
+      return null;
+    }
+
+    console.log(`[OVERLAP] ✅ Pickup at ${pickupLocationOnDriver.toFixed(3)}km, Dropoff at ${dropoffLocationOnDriver.toFixed(3)}km on driver route (correct order)`);
+
+    // ===== CALCULATE OVERLAP SEGMENT =====
+    // Extract driver route segment from pickup to dropoff location
+    const overlapDistance = dropoffLocationOnDriver - pickupLocationOnDriver;
+    
+    // Get passenger route distance
+    const passengerRouteDist = calculateRouteLength(passengerCoords);
+    
+    // Calculate overlap ratio
+    const overlapRatio = overlapDistance / passengerRouteDist;
+
+    console.log(`[OVERLAP] 📏 Passenger route: ${passengerRouteDist.toFixed(3)}km, Overlap coverage: ${overlapDistance.toFixed(3)}km (${(overlapRatio * 100).toFixed(1)}%)`);
+
+    // Only match if overlap is significant (at least 30% of passenger journey)
+    const MIN_OVERLAP_RATIO = 0.30;
+    if (overlapRatio < MIN_OVERLAP_RATIO) {
+      console.log(`[OVERLAP] ❌ INSUFFICIENT OVERLAP: ${(overlapRatio * 100).toFixed(1)}% < ${MIN_OVERLAP_RATIO * 100}% required`);
+      return null;
+    }
+
+    console.log(`[OVERLAP] ✅ VALID MATCH: Rider's path is covered by driver's route (${(overlapRatio * 100).toFixed(1)}%)`);
+
+    return {
+      pickupDistMeters: Math.round(pickupDistMeters),
+      dropoffDistMeters: Math.round(dropoffDistMeters),
+      pickupLocationKm: pickupLocationOnDriver,
+      dropoffLocationKm: dropoffLocationOnDriver,
+      overlapDistanceKm: overlapDistance,
+      overlapRatio: overlapRatio,
+      pickupPoint: nearestPickup.geometry.coordinates,
+      dropoffPoint: nearestDropoff.geometry.coordinates
+    };
   } catch (error) {
     console.error('[OVERLAP] ❌ Error calculating overlap segment:', error.message);
     return null;
@@ -172,64 +224,79 @@ function calcBearing(lat1, lng1, lat2, lng2) {
 }
 
 /**
- * Direction check removed - riders and drivers know each other's direction
- * via pickup/destination selection, so no need for bearing validation
+ * Direction check: Verify pickup < dropoff on driver route
+ * @param {Number} pickupLocationKm - Distance of pickup along driver route
+ * @param {Number} dropoffLocationKm - Distance of dropoff along driver route
+ * @returns {Boolean} True if order is correct
  */
-function isSameDirection(driverCoords, passengerOverlapCoords) {
-  // Always return true since app has explicit pickup/destination selection
-  return true;
+function isSameDirection(pickupLocationKm, dropoffLocationKm) {
+  const isCorrectOrder = pickupLocationKm < dropoffLocationKm;
+  if (isCorrectOrder) {
+    console.log(`[DIRECTION] ✅ Correct order: Pickup (${pickupLocationKm.toFixed(3)}km) before Dropoff (${dropoffLocationKm.toFixed(3)}km)`);
+  } else {
+    console.log(`[DIRECTION] ❌ Wrong order: Pickup (${pickupLocationKm.toFixed(3)}km) after Dropoff (${dropoffLocationKm.toFixed(3)}km)`);
+  }
+  return isCorrectOrder;
 }
 
 /**
  * PHASE 2: Precise matching algorithm
- * @param {Array} driverCoords - Driver route
- * @param {Array} passengerCoords - Passenger route
+ * Validates that rider's entire path is subset of driver's path
+ * @param {Array} driverCoords - Driver route [[lat, lng], ...]
+ * @param {Array} passengerCoords - Passenger route [[lat, lng], ...]
  * @returns {Object} Match result with details
  */
 function phase2PreciseMatch(driverCoords, passengerCoords) {
-  console.log('[PHASE-2] 🔍 Starting precise match...');
-  console.log('[PHASE-2] 📍 Checking if ROUTE PATHS overlap (entire routes, not just endpoints)');
+  console.log('[PHASE-2] 🔍 Starting precise match validation...');
+  console.log('[PHASE-2] ⚠️  CRITICAL CHECKS:');
+  console.log('[PHASE-2]   1. Rider PICKUP must be on driver route (≤500m)');
+  console.log('[PHASE-2]   2. Rider DROPOFF must be on driver route (≤500m)');
+  console.log('[PHASE-2]   3. Pickup must occur BEFORE dropoff on driver route');
+  console.log('[PHASE-2]   4. Overlap must be ≥30% of rider\'s journey');
 
-  // Check spatial overlap of ENTIRE PATHS (not specific endpoints)
-  const overlapPoints = getSpatialOverlapSegment(driverCoords, passengerCoords);
-  if (!overlapPoints) {
-    console.log('[PHASE-2] ❌ FAILED: Route paths do not overlap');
+  // Check spatial overlap + validate rider path is subset of driver path
+  const overlapData = getSpatialOverlapSegment(driverCoords, passengerCoords);
+  if (!overlapData) {
+    console.log('[PHASE-2] ❌ FAILED: Rider\'s path is NOT a valid subset of driver\'s path');
     return {
       matched: false,
-      reason: 'no_path_overlap',
-      message: 'Route paths do not overlap within buffer distance'
+      reason: 'invalid_path_subset',
+      message: 'Rider\'s pickup/dropoff not on driver\'s route or insufficient overlap'
     };
   }
 
-  console.log(`[PHASE-2] ✅ Route paths overlap! Found ${overlapPoints.length} overlapping points`);
+  console.log(`[PHASE-2] ✅ Rider path validated as subset of driver path`);
 
-  // Check direction
-  const sameDir = isSameDirection(driverCoords, overlapPoints);
-  if (!sameDir) {
-    console.log('[PHASE-2] ❌ FAILED: Opposite direction');
+  // Verify direction (pickup before dropoff)
+  const correctOrder = isSameDirection(overlapData.pickupLocationKm, overlapData.dropoffLocationKm);
+  if (!correctOrder) {
+    console.log('[PHASE-2] ❌ FAILED: Pickup/Dropoff in wrong order');
     return {
       matched: false,
-      reason: 'opposite_direction',
-      message: 'Traveling in opposite directions'
+      reason: 'wrong_order',
+      message: 'Rider pickup appears after dropoff on driver route'
     };
   }
 
-  console.log('[PHASE-2] ✅ Direction check passed');
+  console.log('[PHASE-2] ✅ Direction/order validation passed');
 
-  // Calculate match quality based on overlap length
-  const overlapKm = calculateRouteLength(overlapPoints);
-  const matchQuality = Math.min(100, 50 + (overlapKm * 10)); // 50-100 based on overlap length
-
-  console.log(`[PHASE-2] ✅ MATCHED! Quality: ${Math.round(matchQuality)}%, Overlap distance: ${overlapKm.toFixed(3)}km`);
+  // All checks passed - match approved
+  console.log(`[PHASE-2] ✅ MATCHED!`);
+  console.log(`[PHASE-2]    Pickup detour: ${overlapData.pickupDistMeters}m`);
+  console.log(`[PHASE-2]    Dropoff detour: ${overlapData.dropoffDistMeters}m`);
+  console.log(`[PHASE-2]    Overlap distance: ${overlapData.overlapDistanceKm.toFixed(3)}km`);
+  console.log(`[PHASE-2]    Overlap ratio: ${(overlapData.overlapRatio * 100).toFixed(1)}%`);
 
   return {
     matched: true,
-    matchQuality: Math.round(matchQuality),
-    overlapSegment: overlapPoints,
-    pickupPoint: overlapPoints[0],
-    dropoffPoint: overlapPoints[overlapPoints.length - 1],
-    overlapDistanceKm: overlapKm,
-    reason: 'route_path_overlap_detected'
+    pickupDetourMeters: overlapData.pickupDistMeters,
+    dropoffDetourMeters: overlapData.dropoffDistMeters,
+    overlapSegment: [overlapData.pickupPoint, overlapData.dropoffPoint],
+    pickupPoint: overlapData.pickupPoint,
+    dropoffPoint: overlapData.dropoffPoint,
+    overlapDistanceKm: overlapData.overlapDistanceKm,
+    overlapRatio: overlapData.overlapRatio,
+    reason: 'rider_path_subset_of_driver_path'
   };
 }
 
@@ -252,35 +319,29 @@ function calculateRouteLength(coords) {
 /**
  * Calculate fare split based on overlap
  * @param {Number} totalFare - Total base fare
- * @param {Array} overlapSegment - Overlapping route segment
- * @param {Array} fullPassengerRoute - Complete passenger route
+ * @param {Object} matchResult - Match result from phase2PreciseMatch
  * @returns {Object} Fare breakdown
  */
-function calculateFareSplit(totalFare, overlapSegment, fullPassengerRoute) {
+function calculateFareSplit(totalFare, matchResult) {
   try {
-    const overlapKm = calculateRouteLength(overlapSegment);
-    const fullKm = calculateRouteLength(fullPassengerRoute);
-
-    if (fullKm === 0) {
+    if (!matchResult || matchResult.overlapRatio === undefined) {
       return {
         passengerPays: '0.00',
         driverEarns: '0.00',
-        overlapKm: '0.00',
-        shareRatio: '0%',
-        error: 'Invalid route'
+        error: 'Invalid match data'
       };
     }
 
-    const shareRatio = Math.min(1, overlapKm / fullKm);
+    const overlapRatio = matchResult.overlapRatio;
     const discount = 0.7; // 30% discount for sharing
-    const passengerPays = totalFare * shareRatio * discount;
+    const passengerPays = totalFare * overlapRatio * discount;
     const driverEarns = passengerPays;
 
     return {
       passengerPays: passengerPays.toFixed(2),
       driverEarns: driverEarns.toFixed(2),
-      overlapKm: overlapKm.toFixed(2),
-      shareRatio: (shareRatio * 100).toFixed(1) + '%',
+      overlapKm: matchResult.overlapDistanceKm.toFixed(2),
+      shareRatio: (overlapRatio * 100).toFixed(1) + '%',
       discount: '30%'
     };
   } catch (error) {
@@ -295,13 +356,14 @@ function calculateFareSplit(totalFare, overlapSegment, fullPassengerRoute) {
 
 /**
  * MAIN MATCHING FUNCTION - Two-phase algorithm
+ * Validates rider path is a SUBSET of driver path
  * @param {Array} driverCoords - Driver's GPS coordinates [[lat, lng], ...]
  * @param {Array} passengerCoords - Passenger's GPS coordinates [[lat, lng], ...]
  * @param {Object} tripData - Additional trip data (fares, etc.)
  * @returns {Object} Comprehensive match result
  */
 function matchRoutes(driverCoords, passengerCoords, tripData = {}) {
-  console.log('\n[MATCHING] ========== START ==========');
+  console.log('\n[MATCHING] ========== START MATCHING (SUBSET VALIDATION) ==========');
   console.log('[MATCHING] Driver points:', driverCoords.length, 'Passenger points:', passengerCoords.length);
 
   // Validate inputs
@@ -316,28 +378,25 @@ function matchRoutes(driverCoords, passengerCoords, tripData = {}) {
   }
 
   // PHASE 1: Fast H3 pre-filter
-  console.log('[MATCHING] → PHASE 1: H3 hexagon pre-filter...');
+  console.log('[MATCHING] → PHASE 1: H3 hexagon pre-filter (quick geographic check)...');
   if (!phase1HexOverlap(driverCoords, passengerCoords)) {
-    console.log('[MATCHING] ❌ RESULT: NO MATCH (Phase 1 failed)');
+    console.log('[MATCHING] ❌ RESULT: NO MATCH (Phase 1 failed - routes too far apart)');
     return { matched: false, reason: 'phase1_no_overlap', message: 'Routes too far apart (H3 pre-filter)' };
   }
 
-  // PHASE 2: Precise spatial + direction check
-  console.log('[MATCHING] → PHASE 2: Precise spatial + direction check...');
+  // PHASE 2: Precise spatial validation - CRITICAL: CHECK RIDER PATH IS SUBSET
+  console.log('[MATCHING] → PHASE 2: Precise validation (rider path subset check)...');
   const result = phase2PreciseMatch(driverCoords, passengerCoords);
 
   // If matched, add fare calculation
   if (result.matched && tripData.baseFare) {
-    const fareSplit = calculateFareSplit(
-      tripData.baseFare,
-      result.overlapSegment,
-      passengerCoords
-    );
+    const fareSplit = calculateFareSplit(tripData.baseFare, result);
     result.fareSplit = fareSplit;
   }
 
-  console.log(`[MATCHING] ✅ FINAL RESULT: ${result.matched ? 'MATCHED' : 'NOT MATCHED'} (${result.reason})`);
-  console.log('[MATCHING] ========== END ==========\n');
+  console.log(`[MATCHING] ✅ FINAL RESULT: ${result.matched ? 'MATCHED ✓' : 'NOT MATCHED ✗'}`);
+  console.log(`[MATCHING] Reason: ${result.reason}`);
+  console.log('[MATCHING] ========== END MATCHING ==========\n');
   return result;
 }
 
