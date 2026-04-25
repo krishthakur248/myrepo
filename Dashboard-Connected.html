@@ -897,20 +897,22 @@
 
                 // Calculate fare based on distance (will be calculated per ride based on vehicle type)
                 riderTripFare = 0; // Will be calculated for each ride individually
-
+                // Use map-picked pickup if available, otherwise use current GPS location
+                const effectivePickup = pickupLocation || userLocation;
                 console.log('🚗 [SEARCH-RIDES] Destination:', destinationLocation);
-                console.log('📍 [SEARCH-RIDES] User Location:', userLocation);
+                console.log('📍 [SEARCH-RIDES] Effective Pickup:', effectivePickup, '(source:', pickupLocation ? 'map-picked' : 'GPS', ')');
                 console.log('📏 [SEARCH-RIDES] Rider Distance:', riderDistance.toFixed(2) + ' km');
                 console.log('[SEARCH-RIDES] Search params:', {
-                    pickup: [userLocation.lng, userLocation.lat],
+                    pickup: [effectivePickup.lng, effectivePickup.lat],
                     dropoff: [destinationLocation.lng, destinationLocation.lat],
                     riderDistance: riderDistance.toFixed(2),
-                    calculatedFare: riderTripFare
+                    maxDistance: 10
                 });
 
                 const response = await TripServiceAPI.findMatches(
-                    [userLocation.lng, userLocation.lat],
-                    [destinationLocation.lng, destinationLocation.lat]
+                    [effectivePickup.lng, effectivePickup.lat],
+                    [destinationLocation.lng, destinationLocation.lat],
+                    10
                 );
 
                 console.log('✅ [SEARCH-RESPONSE] Found matches:', response.matches?.length || 0);
