@@ -34,14 +34,20 @@ const MIN_SHARED_HEXAGONS = 1; // Require 1+ shared hex cells (paths in same geo
  * @returns {Set} Set of H3 cell IDs
  */
 function getRouteHexagons(coords) {
-  if (!h3) return new Set(); // Fallback if h3 not available
+  if (!h3) return new Set();
 
   return new Set(
     coords.map(([lat, lng]) => {
       try {
-        return h3.latLngToCell(lat, lng, H3_RESOLUTION);
+        // Support h3-js v4 (latLngToCell) AND v3 (geoToH3)
+        if (typeof h3.latLngToCell === 'function') {
+          return h3.latLngToCell(lat, lng, H3_RESOLUTION);
+        } else if (typeof h3.geoToH3 === 'function') {
+          return h3.geoToH3(lat, lng, H3_RESOLUTION);
+        }
+        return null;
       } catch (e) {
-        console.error('[H3] Error converting coords:', e);
+        // Don't crash — just skip this point
         return null;
       }
     }).filter(Boolean)
@@ -49,40 +55,47 @@ function getRouteHexagons(coords) {
 }
 
 /**
- * Phase 1: Check if routes overlap using H3 hexagons
- * @param {Array} driverCoords - Driver route [[lat, lng], ...]
- * @param {Array} passengerCoords - Passenger route [[lat, lng], ...]
- * @returns {Boolean} Whether routes have significant overlap
+ * Phase 1: Fast H3 hexagon pre-filter.
+ * ANY failure (empty sets, API errors, etc.) skips to Phase 2
+ * so the precise spatial check always gets a chance to run.
  */
 function phase1HexOverlap(driverCoords, passengerCoords) {
-  if (!h3) {
-    console.log('[PHASE-1] ⚠️  H3 not available - skipping pre-filter, moving to Phase 2');
-    return true; // Continue to Phase 2 if H3 unavailable
-  }
+  try {
+    if (!h3) {
+      console.log('[PHASE-1] ⚠️  H3 not available — skipping to Phase 2');
+      return true;
+    }
 
-  if (driverCoords.length < 2 || passengerCoords.length < 2) {
-    console.log('[PHASE-1] ❌ Insufficient data: need at least 2 points per route');
+    if (driverCoords.length < 2 || passengerCoords.length < 2) {
+      console.log('[PHASE-1] ⚠️  Fewer than 2 points — skipping to Phase 2');
+      return true; // let Phase 2 decide
+    }
+
+    const driverHexes = getRouteHexagons(driverCoords);
+    const passHexes   = getRouteHexagons(passengerCoords);
+
+    // If H3 could not compute cells (API mismatch, native error, etc.)
+    // skip Phase 1 entirely and let Phase 2 do the real check.
+    if (driverHexes.size === 0 || passHexes.size === 0) {
+      console.log('[PHASE-1] ⚠️  H3 produced no cells — skipping to Phase 2');
+      return true;
+    }
+
+    const shared = [...driverHexes].filter(h => passHexes.has(h));
+    console.log(`[PHASE-1] Driver hexes: ${driverHexes.size}, Rider hexes: ${passHexes.size}, Shared: ${shared.length}`);
+
+    if (shared.length >= MIN_SHARED_HEXAGONS) {
+      console.log(`[PHASE-1] ✅ PASSED (${shared.length} shared hex cells)`);
+      return true;
+    }
+
+    console.log(`[PHASE-1] ❌ FAILED — routes in different geographic areas (${shared.length} shared)`);
     return false;
-  }
 
-  const driverHexes = getRouteHexagons(driverCoords);
-  const passHexes = getRouteHexagons(passengerCoords);
-
-  if (driverHexes.size === 0 || passHexes.size === 0) {
-    console.log('[PHASE-1] ❌ FAILED: One route is empty');
-    return false;
-  }
-
-  const shared = [...driverHexes].filter(h => passHexes.has(h));
-
-  console.log(`[PHASE-1] ✅ Driver hexes: ${driverHexes.size}, Passenger hexes: ${passHexes.size}, Shared: ${shared.length}`);
-
-  if (shared.length >= MIN_SHARED_HEXAGONS) {
-    console.log(`[PHASE-1] ✅ PASSED (${shared.length} >= ${MIN_SHARED_HEXAGONS})`);
+  } catch (err) {
+    // Any unexpected H3 error — skip to Phase 2
+    console.warn('[PHASE-1] ⚠️  Unexpected H3 error, skipping to Phase 2:', err.message);
     return true;
-  } else {
-    console.log(`[PHASE-1] ❌ FAILED (${shared.length} < ${MIN_SHARED_HEXAGONS})`);
-    return false;
   }
 }
 
