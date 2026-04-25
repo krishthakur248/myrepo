@@ -151,8 +151,8 @@ exports.findMatches = async (req, res) => {
         const riderPickupCoords  = Array.isArray(pickupLocation)  ? pickupLocation  : pickupLocation.coordinates;
         const riderDropoffCoords = Array.isArray(dropoffLocation) ? dropoffLocation : dropoffLocation.coordinates;
 
-        console.log(`[FIND-MATCHES] Rider Pickup : [${riderPickupCoords}]`);
-        console.log(`[FIND-MATCHES] Rider Dropoff: [${riderDropoffCoords}]`);
+        console.log(`[FIND-MATCHES] STEP-A: Rider Pickup coords  = [${riderPickupCoords}]`);
+        console.log(`[FIND-MATCHES] STEP-A: Rider Dropoff coords = [${riderDropoffCoords}]`);
 
         // ── Step 1: Spatial candidate query ──────────────────────────────────
         let candidates = await Trip.find({
@@ -169,11 +169,15 @@ exports.findMatches = async (req, res) => {
         .populate('driver', 'firstName lastName rating totalRides vehicle vehicleNumber vehicleColor profileImage')
         .limit(30);
 
-        console.log(`[FIND-MATCHES] Candidates within ${maxDistance}km: ${candidates.length}`);
+        console.log(`[FIND-MATCHES] STEP-B: $near (${maxDistance}km) returned ${candidates.length} candidate(s)`);
 
         // ── Fallback: widen to 50 km if nothing found ─────────────────────
         if (candidates.length === 0) {
-            console.log('[FIND-MATCHES] ⚠️  No nearby candidates — widening to 50 km fallback...');
+            console.log('[FIND-MATCHES] STEP-B2: No candidates — widening to 50 km...');
+            // Also check total active trips to diagnose DB issues
+            const totalActive = await Trip.countDocuments({ status: 'active', driver: { $ne: userId } });
+            console.log(`[FIND-MATCHES] STEP-B2: Total active trips in DB (excl. self): ${totalActive}`);
+
             candidates = await Trip.find({
                 status: 'active',
                 $expr: { $lt: ['$occupiedSeats', '$availableSeats'] },
@@ -187,17 +191,23 @@ exports.findMatches = async (req, res) => {
             })
             .populate('driver', 'firstName lastName rating totalRides vehicle vehicleNumber vehicleColor profileImage')
             .limit(30);
-            console.log(`[FIND-MATCHES] Fallback candidates: ${candidates.length}`);
+            console.log(`[FIND-MATCHES] STEP-B2: 50-km fallback returned ${candidates.length} candidate(s)`);
         }
 
+        // Log every candidate found
+        candidates.forEach((c, i) => {
+            console.log(`[FIND-MATCHES] STEP-B candidate[${i}]: tripId=${c._id} driver=${c.driver?.firstName} routeHistoryLen=${c.routeHistory?.length || 0} seats=${c.occupiedSeats}/${c.availableSeats}`);
+            console.log(`  pickup  DB coords: [${c.pickupLocation?.coordinates?.coordinates}]`);
+            console.log(`  dropoff DB coords: [${c.dropoffLocation?.coordinates?.coordinates}]`);
+        });
+
         // ── Step 2: Route-matching filter ─────────────────────────────────
-        // Rider route in [lat, lng] format (matchRoutes expects [lat, lng])
         const riderRoute = [
             [riderPickupCoords[1],  riderPickupCoords[0]],
             [riderDropoffCoords[1], riderDropoffCoords[0]]
         ];
+        console.log(`[FIND-MATCHES] STEP-C: riderRoute (lat,lng) = [[${riderRoute[0]}],[${riderRoute[1]}]]`);
 
-        // Straight-line distance between rider pickup and dropoff (km) for fare/distance calcs
         const turf = require('@turf/turf');
         const riderPickupPt  = turf.point(riderPickupCoords);
         const riderDropoffPt = turf.point(riderDropoffCoords);
@@ -209,42 +219,55 @@ exports.findMatches = async (req, res) => {
                 const pickupCoords  = trip.pickupLocation?.coordinates?.coordinates;  // [lng, lat]
                 const dropoffCoords = trip.dropoffLocation?.coordinates?.coordinates; // [lng, lat]
 
+                console.log(`\n[FIND-MATCHES] STEP-D: Processing trip ${trip._id}`);
+
                 if (!pickupCoords || !dropoffCoords) {
-                    console.log(`[FIND-MATCHES] Trip ${trip._id}: missing coords, skipping`);
+                    console.log(`[FIND-MATCHES] STEP-D: ❌ SKIP — missing coords (pickup=${JSON.stringify(pickupCoords)} dropoff=${JSON.stringify(dropoffCoords)})`);
                     continue;
                 }
+                console.log(`[FIND-MATCHES] STEP-D: driver pickup  DB = [${pickupCoords}]  → latLng=[${pickupCoords[1]},${pickupCoords[0]}]`);
+                console.log(`[FIND-MATCHES] STEP-D: driver dropoff DB = [${dropoffCoords}] → latLng=[${dropoffCoords[1]},${dropoffCoords[0]}]`);
 
                 // Build driver route in [lat, lng] format
                 let driverRoute;
+                let routeSource = 'unknown';
                 if (trip.routeHistory && trip.routeHistory.length >= 2) {
                     driverRoute = trip.routeHistory.map(p => [p.latitude, p.longitude]);
+                    routeSource = `routeHistory(${driverRoute.length}pts)`;
                 } else {
-                    // Try OSRM for a richer route if we only have 2 points
+                    console.log(`[FIND-MATCHES] STEP-D: routeHistory has ${trip.routeHistory?.length || 0} pts — trying OSRM...`);
                     try {
                         const osrmWaypoints = await getOSRMRoute(pickupCoords, dropoffCoords);
                         if (osrmWaypoints && osrmWaypoints.length >= 2) {
-                            driverRoute = osrmWaypoints; // already [lat, lng]
-                            console.log(`[FIND-MATCHES] Trip ${trip._id}: OSRM gave ${driverRoute.length} waypoints`);
+                            driverRoute = osrmWaypoints;
+                            routeSource = `OSRM(${driverRoute.length}pts)`;
+                        } else {
+                            console.log(`[FIND-MATCHES] STEP-D: OSRM returned no waypoints`);
                         }
-                    } catch (_) {}
+                    } catch (osrmErr) {
+                        console.log(`[FIND-MATCHES] STEP-D: OSRM error: ${osrmErr.message}`);
+                    }
 
                     if (!driverRoute) {
-                        // Fallback: straight line [lat, lng]
                         driverRoute = [
                             [pickupCoords[1],  pickupCoords[0]],
                             [dropoffCoords[1], dropoffCoords[0]]
                         ];
+                        routeSource = 'straight-line-fallback';
                     }
                 }
-
-                console.log(`\n[FIND-MATCHES] --- Trip ${trip._id} (${trip.driver?.firstName}) ---`);
-                console.log(`  Driver route: ${driverRoute.length} points`);
+                console.log(`[FIND-MATCHES] STEP-D: driverRoute source=${routeSource}  points=${driverRoute.length}`);
+                console.log(`[FIND-MATCHES] STEP-D: driverRoute[0]=[${driverRoute[0]}]  driverRoute[-1]=[${driverRoute[driverRoute.length-1]}]`);
 
                 // Run matching algorithm
                 const matchResult = matchRoutes(driverRoute, riderRoute, { baseFare: trip.baseFare || 100 });
+                console.log(`[FIND-MATCHES] STEP-E: matchResult matched=${matchResult.matched} reason=${matchResult.reason}`);
+                if (matchResult.overlapRatio !== undefined) {
+                    console.log(`[FIND-MATCHES] STEP-E: overlapRatio=${(matchResult.overlapRatio*100).toFixed(1)}% overlapKm=${matchResult.overlapDistanceKm?.toFixed(3)}`);
+                }
 
                 if (!matchResult.matched) {
-                    console.log(`[FIND-MATCHES] ✗ No match: ${matchResult.reason}`);
+                    console.log(`[FIND-MATCHES] STEP-E: ❌ NO MATCH — ${matchResult.reason} / ${matchResult.message || ''}`);
                     continue;
                 }
 
