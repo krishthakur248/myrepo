@@ -4,10 +4,10 @@
 
 **Problem**: The matching engine was approving matches even when the rider's route was NOT actually covered by the driver's route.
 
-**Why it happened**: 
+**Why it happened**:
 The old `getSpatialOverlapSegment()` function was only checking if ANY passenger route points fell within a 500m buffer of the driver's route. It did NOT validate:
 1. That the rider's PICKUP point is actually on the driver's route
-2. That the rider's DROPOFF point is actually on the driver's route  
+2. That the rider's DROPOFF point is actually on the driver's route
 3. That these points are in the correct order on the driver's route
 4. That the overlap is meaningful (≥30% of rider's journey)
 
