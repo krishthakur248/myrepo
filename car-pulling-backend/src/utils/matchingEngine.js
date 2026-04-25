@@ -106,10 +106,11 @@ function toLine(coords) {
 }
 
 /**
- * Get overlapping segment: Validate passenger route is subset of driver route
- * Uses simpler approach: check if passenger start/end are on driver route
+ * Get overlapping segment: Proximity-based approach
+ * Checks if rider pickup & dropoff are close to driver route,
+ * in the correct travel order, with sufficient path coverage.
  * @param {Array} driverCoords - Driver route [[lat, lng], ...]
- * @param {Array} passengerCoords - Passenger route [[lat, lng], ...]
+ * @param {Array} passengerCoords - Rider route [[lat, lng], ...]
  * @returns {Object|null} Match data or null
  */
 function getSpatialOverlapSegment(driverCoords, passengerCoords) {
@@ -120,90 +121,91 @@ function getSpatialOverlapSegment(driverCoords, passengerCoords) {
     }
 
     const driverLine = toLine(driverCoords);
-    const passengerLine = toLine(passengerCoords);
-
-    if (!driverLine || !passengerLine) {
-      console.log('[OVERLAP] ❌ Could not create lines');
+    if (!driverLine) {
+      console.log('[OVERLAP] ❌ Could not create driver line');
       return null;
     }
 
-    // ===== GET ENDPOINT DISTANCES =====
-    const passengerStart = passengerCoords[0];
-    const passengerEnd = passengerCoords[passengerCoords.length - 1];
+    // Rider's pickup = first point, dropoff = last point
+    const riderPickup  = passengerCoords[0];
+    const riderDropoff = passengerCoords[passengerCoords.length - 1];
 
-    const pickupPoint = turf.point([passengerStart[1], passengerStart[0]]);
-    const dropoffPoint = turf.point([passengerEnd[1], passengerEnd[0]]);
+    const pickupPoint  = turf.point([riderPickup[1],  riderPickup[0]]);
+    const dropoffPoint = turf.point([riderDropoff[1], riderDropoff[0]]);
 
-    const nearestPickup = turf.nearestPointOnLine(driverLine, pickupPoint);
-    const nearestDropoff = turf.nearestPointOnLine(driverLine, dropoffPoint);
+    // Snap pickup & dropoff onto the driver's route
+    const nearestPickup  = turf.nearestPointOnLine(driverLine, pickupPoint,  { units: 'kilometers' });
+    const nearestDropoff = turf.nearestPointOnLine(driverLine, dropoffPoint, { units: 'kilometers' });
 
-    const pickupDistMeters = nearestPickup.properties.dist * 1000;
+    // dist is in km when units:'kilometers' is set
+    const pickupDistMeters  = nearestPickup.properties.dist  * 1000;
     const dropoffDistMeters = nearestDropoff.properties.dist * 1000;
-    const pickupLocationOnDriver = nearestPickup.properties.location;
-    const dropoffLocationOnDriver = nearestDropoff.properties.location;
+    const pickupLocKm  = nearestPickup.properties.location  || 0;
+    const dropoffLocKm = nearestDropoff.properties.location || 0;
 
-    const MAX_DETOUR_M = 500;
+    // Generous buffer — real-world roads curve, so 800 m is reasonable
+    const MAX_DETOUR_M = 800;
 
-    console.log(`[OVERLAP] 🎯 Passenger START: ${pickupDistMeters.toFixed(0)}m from driver route (at ${pickupLocationOnDriver.toFixed(3)}km on driver route)`);
-    console.log(`[OVERLAP] 🎯 Passenger END: ${dropoffDistMeters.toFixed(0)}m from driver route (at ${dropoffLocationOnDriver.toFixed(3)}km on driver route)`);
+    console.log(`[OVERLAP] 🎯 Rider PICKUP  : ${pickupDistMeters.toFixed(0)}m from driver route (at ${pickupLocKm.toFixed(3)}km along driver route)`);
+    console.log(`[OVERLAP] 🎯 Rider DROPOFF : ${dropoffDistMeters.toFixed(0)}m from driver route (at ${dropoffLocKm.toFixed(3)}km along driver route)`);
 
-    // ===== VALIDATE ENDPOINTS =====
     if (pickupDistMeters > MAX_DETOUR_M) {
       console.log(`[OVERLAP] ❌ PICKUP TOO FAR: ${pickupDistMeters.toFixed(0)}m > ${MAX_DETOUR_M}m`);
       return null;
     }
-
     if (dropoffDistMeters > MAX_DETOUR_M) {
       console.log(`[OVERLAP] ❌ DROPOFF TOO FAR: ${dropoffDistMeters.toFixed(0)}m > ${MAX_DETOUR_M}m`);
       return null;
     }
 
-    // ===== VALIDATE ORDER =====
-    if (pickupLocationOnDriver > dropoffLocationOnDriver) {
-      console.log(`[OVERLAP] ❌ WRONG ORDER: Pickup at ${pickupLocationOnDriver.toFixed(3)}km, Dropoff at ${dropoffLocationOnDriver.toFixed(3)}km`);
-      return null;
+    // Pickup must come before dropoff on the driver's path
+    if (pickupLocKm >= dropoffLocKm) {
+      // Allow a tiny tolerance (0.05 km = 50 m) for rounding
+      if (pickupLocKm - dropoffLocKm > 0.05) {
+        console.log(`[OVERLAP] ❌ WRONG ORDER: Pickup at ${pickupLocKm.toFixed(3)}km, Dropoff at ${dropoffLocKm.toFixed(3)}km`);
+        return null;
+      }
     }
 
-    // ===== CALCULATE OVERLAP =====
-    // The overlap distance is from pickup location to dropoff location on driver route
-    const overlapDistanceOnDriver = dropoffLocationOnDriver - pickupLocationOnDriver;
+    // Segment the driver covers while carrying the rider
+    const overlapDistanceKm = Math.max(0, dropoffLocKm - pickupLocKm);
 
-    // Passenger total distance
-    const passengerRouteDist = turf.length(passengerLine, { units: 'kilometers' });
+    // Rider's straight-line distance (haversine via turf)
+    const riderStraightKm = turf.distance(pickupPoint, dropoffPoint, { units: 'kilometers' });
 
-    // Overlap ratio: what percentage of passenger's journey is covered?
-    const overlapRatio = overlapDistanceOnDriver / passengerRouteDist;
+    // Use the larger of actual rider distance or overlap as denominator
+    // This prevents a tiny rider route inflating the ratio artificially
+    const denominator = Math.max(riderStraightKm, 0.1);
+    const overlapRatio = Math.min(1.0, overlapDistanceKm / denominator);
 
-    console.log(`[OVERLAP] 📏 Passenger route: ${passengerRouteDist.toFixed(3)}km`);
-    console.log(`[OVERLAP] 📏 Distance from pickup to dropoff on driver route: ${overlapDistanceOnDriver.toFixed(3)}km`);
+    console.log(`[OVERLAP] 📏 Rider straight-line: ${riderStraightKm.toFixed(3)}km`);
+    console.log(`[OVERLAP] 📏 Driver segment for rider: ${overlapDistanceKm.toFixed(3)}km`);
     console.log(`[OVERLAP] 📏 Coverage ratio: ${(overlapRatio * 100).toFixed(1)}%`);
 
-    // ===== CHECK MINIMUM OVERLAP =====
-    // If routes are same/nearly same, overlap will be high (>90%)
-    // If passenger is part of driver route, overlap will be significant (>30%)
-    const MIN_OVERLAP_RATIO = 0.25; // 25% minimum for flexibility
-
+    // Minimum 20% coverage — generous for real-world city trips
+    const MIN_OVERLAP_RATIO = 0.20;
     if (overlapRatio < MIN_OVERLAP_RATIO) {
       console.log(`[OVERLAP] ❌ INSUFFICIENT OVERLAP: ${(overlapRatio * 100).toFixed(1)}% < ${MIN_OVERLAP_RATIO * 100}%`);
       return null;
     }
 
-    console.log(`[OVERLAP] ✅ VALID OVERLAP: ${(overlapRatio * 100).toFixed(1)}% of passenger journey`);
+    console.log(`[OVERLAP] ✅ VALID OVERLAP: ${(overlapRatio * 100).toFixed(1)}% coverage`);
 
     return {
-      pickupDistMeters: Math.round(pickupDistMeters),
+      pickupDistMeters:  Math.round(pickupDistMeters),
       dropoffDistMeters: Math.round(dropoffDistMeters),
-      pickupLocationKm: pickupLocationOnDriver,
-      dropoffLocationKm: dropoffLocationOnDriver,
-      overlapDistanceKm: overlapDistanceOnDriver,
-      overlapRatio: overlapRatio,
-      pickupPoint: nearestPickup.geometry.coordinates,
-      dropoffPoint: nearestDropoff.geometry.coordinates
+      pickupLocationKm:  pickupLocKm,
+      dropoffLocationKm: dropoffLocKm,
+      overlapDistanceKm: overlapDistanceKm,
+      overlapRatio:      overlapRatio,
+      pickupPoint:       nearestPickup.geometry.coordinates,
+      dropoffPoint:      nearestDropoff.geometry.coordinates
     };
 
   } catch (error) {
     console.error('[OVERLAP] ❌ Error:', error.message);
     console.error(error.stack);
+    return null;
   }
 }
 

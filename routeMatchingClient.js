@@ -11,9 +11,9 @@
 // Configuration
 const ROUTE_MATCHING_CONFIG = {
   OSRM_API: 'https://router.project-osrm.org/route/v1/driving',
-  PICKUP_DROPOFF_BUFFER_M: 500,        // 500 meters
-  OVERLAP_TOLERANCE_M: 25,             // 25 meters for line overlap detection
-  MIN_OVERLAP_RATIO: 0.30,             // 30% minimum overlap
+  PICKUP_DROPOFF_BUFFER_M: 800,        // 800 meters (real-world roads curve)
+  OVERLAP_TOLERANCE_M: 25,             // 25 meters (kept for reference)
+  MIN_OVERLAP_RATIO: 0.20,             // 20% minimum overlap
   DIRECTION_TOLERANCE_DEG: 60,         // 60 degree tolerance for direction
   REQUEST_TIMEOUT: 5000,               // 5 second timeout
 };
@@ -107,28 +107,72 @@ function doLinesIntersect(driverLine, passengerLine) {
 }
 
 /**
- * Find overlapping segments using Turf.js lineOverlap
- * @param {Object} driverLine - Turf LineString
+ * Proximity-based overlap: snap rider pickup & dropoff onto driver route,
+ * verify order and compute coverage ratio.
+ * @param {Object} driverLine  - Turf LineString
  * @param {Object} passengerLine - Turf LineString
- * @returns {Object|null} Overlap feature collection
+ * @returns {Object|null} { overlapKm, overlapRatio, pickupSnap, dropoffSnap, pickupDistM, dropoffDistM }
  */
 function findOverlapSegments(driverLine, passengerLine) {
   try {
-    // Convert tolerance from meters to kilometers
-    const toleranceKm = ROUTE_MATCHING_CONFIG.OVERLAP_TOLERANCE_M / 1000;
-    
-    const overlap = turf.lineOverlap(driverLine, passengerLine, {
-      tolerance: toleranceKm
-    });
+    // Rider endpoints
+    const coords = passengerLine.geometry.coordinates;
+    const riderPickupPt  = turf.point(coords[0]);
+    const riderDropoffPt = turf.point(coords[coords.length - 1]);
 
-    if (!overlap || overlap.features.length === 0) {
-      console.log('[OVERLAP] No overlapping segments found');
+    // Snap onto driver route
+    const snapPickup  = turf.nearestPointOnLine(driverLine, riderPickupPt,  { units: 'kilometers' });
+    const snapDropoff = turf.nearestPointOnLine(driverLine, riderDropoffPt, { units: 'kilometers' });
+
+    const pickupDistM  = snapPickup.properties.dist  * 1000;
+    const dropoffDistM = snapDropoff.properties.dist * 1000;
+    const pickupLocKm  = snapPickup.properties.location  || 0;
+    const dropoffLocKm = snapDropoff.properties.location || 0;
+
+    const MAX_DETOUR_M = ROUTE_MATCHING_CONFIG.PICKUP_DROPOFF_BUFFER_M;
+
+    console.log(`[OVERLAP] Rider PICKUP  : ${pickupDistM.toFixed(0)}m from driver route (at ${pickupLocKm.toFixed(3)}km)`);
+    console.log(`[OVERLAP] Rider DROPOFF : ${dropoffDistM.toFixed(0)}m from driver route (at ${dropoffLocKm.toFixed(3)}km)`);
+
+    if (pickupDistM > MAX_DETOUR_M) {
+      console.log(`[OVERLAP] ❌ PICKUP TOO FAR: ${pickupDistM.toFixed(0)}m`);
+      return null;
+    }
+    if (dropoffDistM > MAX_DETOUR_M) {
+      console.log(`[OVERLAP] ❌ DROPOFF TOO FAR: ${dropoffDistM.toFixed(0)}m`);
+      return null;
+    }
+    if (pickupLocKm - dropoffLocKm > 0.05) {
+      console.log(`[OVERLAP] ❌ WRONG ORDER`);
       return null;
     }
 
-    console.log(`[OVERLAP] Found ${overlap.features.length} overlapping segment(s)`);
-    return overlap;
+    const overlapKm = Math.max(0, dropoffLocKm - pickupLocKm);
+    const riderStraightKm = turf.length(passengerLine, { units: 'kilometers' });
+    const denominator  = Math.max(riderStraightKm, 0.1);
+    const overlapRatio = Math.min(1.0, overlapKm / denominator);
 
+    console.log(`[OVERLAP] Coverage: ${(overlapRatio * 100).toFixed(1)}%  (${overlapKm.toFixed(3)}km / ${riderStraightKm.toFixed(3)}km)`);
+
+    if (overlapRatio < ROUTE_MATCHING_CONFIG.MIN_OVERLAP_RATIO) {
+      console.log(`[OVERLAP] ❌ Insufficient overlap`);
+      return null;
+    }
+
+    console.log(`[OVERLAP] ✅ Valid overlap`);
+
+    // Return in a shape the rest of evaluateRouteMatch can use
+    return {
+      features: [{ geometry: { type: 'LineString', coordinates: [snapPickup.geometry.coordinates, snapDropoff.geometry.coordinates] } }],
+      _overlapKm:    overlapKm,
+      _overlapRatio: overlapRatio,
+      _pickupDistM:  pickupDistM,
+      _dropoffDistM: dropoffDistM,
+      _pickupSnap:   snapPickup.geometry.coordinates,
+      _dropoffSnap:  snapDropoff.geometry.coordinates,
+      _pickupLocKm:  pickupLocKm,
+      _dropoffLocKm: dropoffLocKm
+    };
   } catch (error) {
     console.error('[OVERLAP] Error:', error.message);
     return null;
@@ -388,112 +432,47 @@ async function evaluateRouteMatch(driverRoute, passengerRoute, useOSRM = true) {
       );
     }
 
-    // Step 2: Check intersection
-    console.log('[MATCHING-CLIENT] Step 2: Checking route intersection...');
-    const intersects = doLinesIntersect(driverLine, passengerLine);
+    // Step 2: Find overlaps (proximity-snap approach)
+    console.log('[MATCHING-CLIENT] Step 2: Checking route proximity overlap...');
+    const overlapData = findOverlapSegments(driverLine, passengerLine);
 
-    // Step 3: Find overlaps
-    console.log('[MATCHING-CLIENT] Step 3: Finding overlapping segments...');
-    const overlapFeatures = findOverlapSegments(driverLine, passengerLine);
-
-    if (!overlapFeatures) {
+    if (!overlapData) {
       return {
         isMatch: false,
         overlapKm: 0,
         overlapRatio: 0,
         pickupDetourMeters: -1,
         dropoffDetourMeters: -1,
-        reason: 'No route overlap detected - routes do not share common path segments'
+        reason: 'Rider pickup/dropoff not within buffer of driver route, wrong direction, or insufficient overlap'
       };
     }
 
-    // Step 4: Calculate overlap metrics
-    console.log('[MATCHING-CLIENT] Step 4: Calculating overlap metrics...');
-    const overlapKm = calculateOverlapDistance(overlapFeatures);
-    const passengerDistKm = getPassengerDistance(passengerLine);
-    const overlapRatio = calculateOverlapRatio(overlapKm, passengerDistKm);
+    // Step 3: Compile metrics from overlap data
+    console.log('[MATCHING-CLIENT] Step 3: Compiling overlap metrics...');
+    const overlapKm         = overlapData._overlapKm;
+    const overlapRatio      = overlapData._overlapRatio;
+    const pickupDistM       = overlapData._pickupDistM;
+    const dropoffDistM      = overlapData._dropoffDistM;
+    const passengerDistKm   = turf.length(passengerLine, { units: 'kilometers' });
 
-    if (overlapRatio < ROUTE_MATCHING_CONFIG.MIN_OVERLAP_RATIO) {
-      return {
-        isMatch: false,
-        overlapKm: parseFloat(overlapKm.toFixed(3)),
-        overlapRatio: parseFloat((overlapRatio * 100).toFixed(1)),
-        pickupDetourMeters: -1,
-        dropoffDetourMeters: -1,
-        reason: `Overlap ratio is ${(overlapRatio * 100).toFixed(1)}% but minimum required is ${ROUTE_MATCHING_CONFIG.MIN_OVERLAP_RATIO * 100}%`
-      };
-    }
-
-    // Step 5: Check pickup
-    console.log('[MATCHING-CLIENT] Step 5: Checking pickup proximity...');
-    const pickupData = checkPickupProximity(
-      passengerRoute.pickupLat,
-      passengerRoute.pickupLng,
-      driverLine
-    );
-
-    if (!pickupData.isWithinBuffer) {
-      return {
-        isMatch: false,
-        overlapKm: parseFloat(overlapKm.toFixed(3)),
-        overlapRatio: parseFloat((overlapRatio * 100).toFixed(1)),
-        pickupDetourMeters: pickupData.distanceMeters,
-        dropoffDetourMeters: -1,
-        reason: `Passenger pickup is ${pickupData.distanceMeters}m off the driver's route (max allowed: ${ROUTE_MATCHING_CONFIG.PICKUP_DROPOFF_BUFFER_M}m)`
-      };
-    }
-
-    // Step 6: Check dropoff
-    console.log('[MATCHING-CLIENT] Step 6: Checking dropoff proximity...');
-    const dropoffData = checkDropoffProximity(
-      passengerRoute.dropoffLat,
-      passengerRoute.dropoffLng,
-      driverLine
-    );
-
-    if (!dropoffData.isWithinBuffer) {
-      return {
-        isMatch: false,
-        overlapKm: parseFloat(overlapKm.toFixed(3)),
-        overlapRatio: parseFloat((overlapRatio * 100).toFixed(1)),
-        pickupDetourMeters: pickupData.distanceMeters,
-        dropoffDetourMeters: dropoffData.distanceMeters,
-        reason: `Passenger drop-off is ${dropoffData.distanceMeters}m off the driver's route (max allowed: ${ROUTE_MATCHING_CONFIG.PICKUP_DROPOFF_BUFFER_M}m)`
-      };
-    }
-
-    // Step 7: Verify direction
-    console.log('[MATCHING-CLIENT] Step 7: Verifying direction...');
-    const directionData = verifyDirection(pickupData, dropoffData);
-
-    if (!directionData.isSameDirection) {
-      return {
-        isMatch: false,
-        overlapKm: parseFloat(overlapKm.toFixed(3)),
-        overlapRatio: parseFloat((overlapRatio * 100).toFixed(1)),
-        pickupDetourMeters: pickupData.distanceMeters,
-        dropoffDetourMeters: dropoffData.distanceMeters,
-        reason: 'Routes travel in opposite directions or pickup appears after dropoff on driver route'
-      };
-    }
+    console.log(`[MATCHING-CLIENT] Overlap: ${(overlapRatio*100).toFixed(1)}%  (${overlapKm.toFixed(3)}km)`);
 
     // ========== MATCH APPROVED ==========
     console.log('[MATCHING-CLIENT] ✅ ALL CHECKS PASSED - MATCH APPROVED');
 
     return {
       isMatch: true,
-      overlapKm: parseFloat(overlapKm.toFixed(3)),
-      overlapRatio: parseFloat((overlapRatio * 100).toFixed(1)),
-      pickupDetourMeters: pickupData.distanceMeters,
-      dropoffDetourMeters: dropoffData.distanceMeters,
+      overlapKm:           parseFloat(overlapKm.toFixed(3)),
+      overlapRatio:        parseFloat((overlapRatio * 100).toFixed(1)),
+      pickupDetourMeters:  Math.round(pickupDistM),
+      dropoffDetourMeters: Math.round(dropoffDistM),
       reason: `Routes share ${(overlapRatio * 100).toFixed(1)}% path overlap (${overlapKm.toFixed(3)}km) with pickup and dropoff within ${ROUTE_MATCHING_CONFIG.PICKUP_DROPOFF_BUFFER_M}m buffer`,
       details: {
-        intersects,
-        overlappingSegments: overlapFeatures.features.length,
-        driverRouteKm: parseFloat(turf.length(driverLine, { units: 'kilometers' }).toFixed(3)),
-        passengerRouteKm: parseFloat(passengerDistKm.toFixed(3)),
-        pickupNearestPoint: pickupData.nearestPoint,
-        dropoffNearestPoint: dropoffData.nearestPoint
+        overlappingSegments:  overlapData.features.length,
+        driverRouteKm:        parseFloat(turf.length(driverLine, { units: 'kilometers' }).toFixed(3)),
+        passengerRouteKm:     parseFloat(passengerDistKm.toFixed(3)),
+        pickupNearestPoint:   overlapData._pickupSnap,
+        dropoffNearestPoint:  overlapData._dropoffSnap
       }
     };
 
