@@ -131,7 +131,7 @@ exports.findMatches = async (req, res) => {
     try {
         console.log('\n\n🚀🚀🚀 ========== FIND-MATCHES ENDPOINT CALLED ==========');
         console.log('Timestamp:', new Date().toISOString());
-        
+
         const userId = req.user.id;
         const {
             pickupLocation,
@@ -180,7 +180,7 @@ exports.findMatches = async (req, res) => {
         console.log(`  Max distance: ${maxDistance * 1000}m`);
         console.log(`  Query location: [${riderPickupCoords}]`);
         console.log(`  Candidate trips found: ${candidates.length}`);
-        
+
         if (candidates.length === 0) {
           console.log('  ⚠️  NO CANDIDATES FOUND - Checking all active trips...');
           const allTrips = await Trip.find({ status: 'active' }).select('_id driver pickupLocation');
