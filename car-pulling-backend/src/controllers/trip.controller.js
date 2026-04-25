@@ -1,6 +1,6 @@
 const Trip = require('../models/Trip');
 const User = require('../models/User');
-const { generateUniqueCode, calculateDistance, checkRouteOverlap } = require('../utils/helpers');
+const { generateUniqueCode, calculateDistance, checkRouteOverlap, getOSRMRoute } = require('../utils/helpers');
 const { matchRoutes, calculateFareSplit } = require('../utils/matchingEngine');
 
 // Start a new trip (driver creates ride offer)
@@ -43,7 +43,40 @@ exports.startTrip = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Driver not found' });
         }
 
-        // Create trip
+        console.log(`\n[START-TRIP] 📍 Driver: ${driver.firstName} ${driver.lastName}`);
+        console.log(`[START-TRIP] Pickup: [${pickupCoords}]`);
+        console.log(`[START-TRIP] Dropoff: [${dropoffCoords}]`);
+
+        // Get real road route from OSRM
+        console.log(`[START-TRIP] 🗺️  Fetching real road route from OSRM...`);
+        const osrmWaypoints = await getOSRMRoute(pickupCoords, dropoffCoords);
+
+        // Convert waypoints to routeHistory format
+        let routeHistory = [];
+        if (osrmWaypoints && osrmWaypoints.length > 0) {
+            console.log(`[START-TRIP] ✅ OSRM returned ${osrmWaypoints.length} waypoints`);
+            routeHistory = osrmWaypoints.map((point, index) => ({
+                latitude: point[0],
+                longitude: point[1],
+                timestamp: new Date()
+            }));
+        } else {
+            console.log(`[START-TRIP] ⚠️  OSRM failed, falling back to pickup/dropoff only`);
+            routeHistory = [
+                {
+                    latitude: pickupCoords[1],
+                    longitude: pickupCoords[0],
+                    timestamp: new Date()
+                },
+                {
+                    latitude: dropoffCoords[1],
+                    longitude: dropoffCoords[0],
+                    timestamp: new Date()
+                }
+            ];
+        }
+
+        // Create trip with populated routeHistory
         const trip = new Trip({
             tripCode: generateUniqueCode(),
             driver: userId,
@@ -63,6 +96,7 @@ exports.startTrip = async (req, res) => {
             },
             startTime: startTime || new Date(),
             route: [], // Empty for now, will be populated later if needed
+            routeHistory: routeHistory, // Pre-populated with OSRM waypoints!
             availableSeats,
             occupiedSeats: 1, // Driver occupies 1 seat
             riders: [],
@@ -73,6 +107,9 @@ exports.startTrip = async (req, res) => {
         });
 
         await trip.save();
+
+        console.log(`[START-TRIP] ✅ Trip created: ${trip.tripCode}`);
+        console.log(`[START-TRIP] Route waypoints stored: ${trip.routeHistory.length}`);
 
         res.status(201).json({
             success: true,
@@ -92,6 +129,9 @@ exports.startTrip = async (req, res) => {
 // Find matching trips for a rider (NEW: Using H3 + Turf advanced matching)
 exports.findMatches = async (req, res) => {
     try {
+        console.log('\n\n🚀🚀🚀 ========== FIND-MATCHES ENDPOINT CALLED ==========');
+        console.log('Timestamp:', new Date().toISOString());
+        
         const userId = req.user.id;
         const {
             pickupLocation,
@@ -99,6 +139,9 @@ exports.findMatches = async (req, res) => {
             maxDistance = 5,
             timeWindow = 30
         } = req.body;
+
+        console.log('Request body:', req.body);
+        console.log('User ID:', userId);
 
         if (!pickupLocation || !dropoffLocation) {
             return res.status(400).json({

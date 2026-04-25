@@ -22,15 +22,29 @@ class TripServiceAPI {
   // Find matching trips (rider searches for rides)
   static async findMatches(pickupLocation, dropoffLocation, maxDistance = 5, timeWindow = 30) {
     try {
+      console.log('[TripServiceAPI] Calling findMatches with:', {
+        pickupLocation,
+        dropoffLocation,
+        maxDistance,
+        timeWindow
+      });
+      
       const response = await apiClient.post('/trips/find-matches', {
         pickupLocation,
         dropoffLocation,
         maxDistance,
         timeWindow
       });
+      
+      console.log('[TripServiceAPI] findMatches response:', response);
       return response;
     } catch (error) {
-      console.error('Find matches error:', error);
+      console.error('[TripServiceAPI] Find matches error:', error);
+      console.error('[TripServiceAPI] Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
       throw error;
     }
   }
