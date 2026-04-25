@@ -335,7 +335,6 @@
                 );
 
                 console.log('[SEARCH] Backend response:', JSON.stringify(response));
-                alert('[DEBUG] Response: ' + (response.message || 'unknown') + ' — Matches: ' + (response.matches ? response.matches.length : 0));
 
                 currentMatches = response.matches || [];
                 displayResults();
@@ -344,7 +343,6 @@
                 console.error('[SEARCH] Error:', error);
                 console.error('[SEARCH] Error status:', error.status);
                 console.error('[SEARCH] Error data:', JSON.stringify(error.data));
-                alert('[DEBUG] Search ERROR: ' + error.message + ' (status: ' + (error.status || 'none') + ')');
                 showError(error.message || 'Error searching for rides');
             } finally {
                 document.getElementById('loadingState').classList.add('hidden');
@@ -372,8 +370,12 @@
 
                 const driver = trip.driver;
                 const matchPercent = Math.round(trip.matchScore);
+                const estimatedFare = trip.estimatedFare || 0;
+                const riderPays = trip.riderPays || estimatedFare;
                 const savings = trip.savings || 0;
-                const fare = trip.baseFare || 0;
+                const estimatedDistance = trip.estimatedDistance || 0;
+                const ratePerKm = trip.ratePerKm || 30;
+                const vehicleType = (trip.vehicle || 'car').toUpperCase();
 
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-4">
@@ -395,12 +397,12 @@
                             <span>${trip.vehicle || 'Vehicle'} • ${trip.vehicleColor || 'Color'}</span>
                         </div>
                         <div class="flex items-center gap-2 text-gray-700">
-                            <i class="fas fa-location-dot text-green-600 w-4"></i>
-                            <span>${trip.pickupDistance.toFixed(1)} km from pickup</span>
+                            <i class="fas fa-route text-indigo-600 w-4"></i>
+                            <span>${estimatedDistance.toFixed(1)} km (pickup → dropoff)</span>
                         </div>
                         <div class="flex items-center gap-2 text-gray-700">
-                            <i class="fas fa-map text-red-600 w-4"></i>
-                            <span>${trip.dropoffDistance.toFixed(1)} km from dropoff</span>
+                            <i class="fas fa-location-dot text-green-600 w-4"></i>
+                            <span>${trip.pickupDistance.toFixed(1)} km from your pickup</span>
                         </div>
                         <div class="flex items-center gap-2 text-gray-700">
                             <i class="fas fa-users text-purple-600 w-4"></i>
@@ -408,14 +410,20 @@
                         </div>
                     </div>
 
-                    <div class="bg-blue-50 p-3 rounded-lg mb-4 flex justify-between items-center">
-                        <div>
-                            <p class="text-xs text-gray-600">Base Fare</p>
-                            <p class="text-lg font-bold text-gray-900">₹${fare}</p>
+                    <div class="bg-blue-50 p-3 rounded-lg mb-4">
+                        <div class="flex justify-between items-center mb-1">
+                            <div>
+                                <p class="text-xs text-gray-600">Trip Cost (₹${ratePerKm}/km × ${estimatedDistance.toFixed(1)}km)</p>
+                                <p class="text-lg font-bold text-gray-900">₹${estimatedFare}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-green-600">You Save (30%)</p>
+                                <p class="text-lg font-bold text-green-600">₹${savings}</p>
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <p class="text-xs text-green-600">You Save</p>
-                            <p class="text-lg font-bold text-green-600">₹${savings}</p>
+                        <div class="border-t border-blue-200 pt-1 mt-1 flex justify-between items-center">
+                            <span class="text-sm font-bold text-blue-700">You Pay</span>
+                            <span class="text-xl font-bold text-blue-700">₹${riderPays}</span>
                         </div>
                     </div>
 
@@ -437,7 +445,11 @@
             const modal = document.getElementById('joinModal');
             const content = document.getElementById('modalContent');
 
-            const fare = Math.round(trip.baseFare * 0.6); // Rider pays 60%
+            const estimatedFare = trip.estimatedFare || 0;
+            const riderPays = trip.riderPays || estimatedFare;
+            const savings = trip.savings || 0;
+            const estimatedDistance = trip.estimatedDistance || 0;
+            const ratePerKm = trip.ratePerKm || 30;
 
             content.innerHTML = `
                 <div class="space-y-3">
@@ -447,15 +459,29 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-gray-700">Vehicle:</span>
-                        <span class="text-gray-900">${trip.vehicle} (${trip.vehicleColor})</span>
+                        <span class="text-gray-900">${trip.vehicle} (${trip.vehicleColor || ''})</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-gray-700">Match Score:</span>
                         <span class="text-green-600 font-bold">${Math.round(trip.matchScore)}%</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="font-bold text-gray-700">Your Fare:</span>
-                        <span class="text-blue-600 font-bold text-lg">₹${fare}</span>
+                        <span class="font-bold text-gray-700">Distance:</span>
+                        <span class="text-gray-900">${estimatedDistance.toFixed(1)} km</span>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-sm text-gray-600">Trip Cost (₹${ratePerKm}/km)</span>
+                            <span class="font-bold text-gray-900">₹${estimatedFare}</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-sm text-green-600">Carpool Savings (30%)</span>
+                            <span class="font-bold text-green-600">-₹${savings}</span>
+                        </div>
+                        <div class="border-t border-blue-200 pt-1 mt-1 flex justify-between items-center">
+                            <span class="font-bold text-blue-700">You Pay</span>
+                            <span class="text-xl font-bold text-blue-700">₹${riderPays}</span>
+                        </div>
                     </div>
                     <div class="bg-yellow-50 p-3 rounded-lg text-sm text-yellow-800 border border-yellow-200">
                         <i class="fas fa-info-circle mr-2"></i>
@@ -482,13 +508,30 @@
             btn.innerHTML = '<span class="inline-block w-4 h-4 loading-spinner"></span> Joining...';
 
             try {
-                const response = await TripServiceAPI.joinTrip(selectedTrip._id);
+                // Get rider's pickup and dropoff from the search form
+                const pickupLat = parseFloat(document.getElementById('pickupLat').value);
+                const pickupLng = parseFloat(document.getElementById('pickupLng').value);
+                const dropoffLat = parseFloat(document.getElementById('dropoffLat').value);
+                const dropoffLng = parseFloat(document.getElementById('dropoffLng').value);
+
+                const riderPickup = [pickupLng, pickupLat];   // [lng, lat] format
+                const riderDropoff = [dropoffLng, dropoffLat]; // [lng, lat] format
+                const fare = selectedTrip.riderPays || selectedTrip.estimatedFare || 0;
+
+                console.log('[JOIN] Sending fare:', fare, 'pickup:', riderPickup, 'dropoff:', riderDropoff);
+
+                const response = await TripServiceAPI.joinTrip(
+                    selectedTrip._id,
+                    riderPickup,
+                    riderDropoff,
+                    fare
+                );
 
                 if (response.success) {
                     showNotification('✓ Request sent! Waiting for driver approval...', 'success');
                     closeModal();
                     setTimeout(() => {
-                        window.location.href = './Dashboard.html';
+                        window.location.href = './Dashboard-Connected.html';
                     }, 2000);
                 }
             } catch (error) {

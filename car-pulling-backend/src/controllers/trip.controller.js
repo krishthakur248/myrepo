@@ -3,6 +3,23 @@ const User = require('../models/User');
 const { generateUniqueCode, calculateDistance, checkRouteOverlap, getOSRMRoute } = require('../utils/helpers');
 const { matchRoutes, calculateFareSplit } = require('../utils/matchingEngine');
 
+// Per-km rates by vehicle type (in ₹)
+const RATE_PER_KM = {
+    bike: 20,
+    car: 30,
+    ev: 40
+};
+
+/**
+ * Get the per-km rate for a vehicle type
+ * @param {String} vehicleType - 'bike', 'car', or 'ev'
+ * @returns {Number} rate in ₹/km
+ */
+function getRatePerKm(vehicleType) {
+    const type = (vehicleType || 'car').toLowerCase();
+    return RATE_PER_KM[type] || RATE_PER_KM.car;
+}
+
 // Start a new trip (driver creates ride offer)
 exports.startTrip = async (req, res) => {
     try {
@@ -101,7 +118,22 @@ exports.startTrip = async (req, res) => {
             occupiedSeats: 1, // Driver occupies 1 seat
             riders: [],
             vehicle: vehicleInfo || driver.vehicle || 'car', // Default to 'car' if no info
-            baseFare: estimatedFare || 100,
+            baseFare: (() => {
+                // Calculate distance-based fare: driver pickup → driver dropoff
+                const vehicleType = vehicleInfo || driver.vehicle || 'car';
+                const tripDistanceKm = calculateDistance(
+                    pickupCoords[1], pickupCoords[0],  // lat, lng from [lng, lat]
+                    dropoffCoords[1], dropoffCoords[0]
+                );
+                const rate = getRatePerKm(vehicleType);
+                const calculatedFare = Math.round(tripDistanceKm * rate);
+                console.log(`[START-TRIP] 💰 Fare calculation: ${tripDistanceKm.toFixed(2)}km × ₹${rate}/km (${vehicleType}) = ₹${calculatedFare}`);
+                return estimatedFare || calculatedFare || 100;
+            })(),
+            distance: calculateDistance(
+                pickupCoords[1], pickupCoords[0],
+                dropoffCoords[1], dropoffCoords[0]
+            ),
             status: 'active',
             driverConsent: true
         });
@@ -279,6 +311,17 @@ exports.findMatches = async (req, res) => {
                 const driverDropoffPt = turf.point(dropoffCoords);
                 const dropoffDistance = turf.distance(riderDropoffPt, driverDropoffPt, { units: 'kilometers' });
 
+                // ── Calculate rider fare: distance(rider pickup → driver dropoff) × rate ──
+                const riderToDriverDropoffKm = turf.distance(riderPickupPt, driverDropoffPt, { units: 'kilometers' });
+                const vehicleType = trip.vehicle || 'car';
+                const ratePerKm = getRatePerKm(vehicleType);
+                const estimatedFare = Math.round(riderToDriverDropoffKm * ratePerKm);
+                const soloTripCost = estimatedFare; // What it would cost alone
+                const savings = Math.round(soloTripCost * 0.3); // 30% savings from carpooling
+                const riderPays = soloTripCost - savings;
+
+                console.log(`[FIND-MATCHES] 💰 Rider fare: ${riderToDriverDropoffKm.toFixed(2)}km × ₹${ratePerKm}/km (${vehicleType}) = ₹${estimatedFare}, rider pays ₹${riderPays} (saves ₹${savings})`);
+
                 // matchScore: 0-100 derived from overlapRatio
                 const matchScore = Math.round((matchResult.overlapRatio || 0.5) * 100);
 
@@ -292,7 +335,11 @@ exports.findMatches = async (req, res) => {
                     pickupPoint:       matchResult.pickupPoint,
                     dropoffPoint:      matchResult.dropoffPoint,
                     fareSplit:         matchResult.fareSplit,
-                    savings:           trip.baseFare ? Math.round(trip.baseFare * 0.3) : 0
+                    estimatedFare:     estimatedFare,
+                    estimatedDistance: parseFloat(riderToDriverDropoffKm.toFixed(2)),
+                    riderPays:         riderPays,
+                    savings:           savings,
+                    ratePerKm:         ratePerKm
                 });
 
                 console.log(`[FIND-MATCHES] ✓ MATCHED  score=${matchScore}% overlap=${matchResult.overlapDistanceKm?.toFixed(2)}km`);
