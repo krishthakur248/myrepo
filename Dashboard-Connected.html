@@ -956,11 +956,14 @@
             console.log('Current user ID:', currentUserId);
 
             ridesList.innerHTML = rides.map((ride, index) => {
-                // Calculate fare for this specific ride based on vehicle type
+                // Use backend-calculated fare based on rider pickup → driver dropoff distance
                 const vehicleType = (ride.vehicle || ride.driver?.vehicle || 'car').toLowerCase();
-                console.log(`[FARE_DEBUG] Ride ${index}: riderDistance=${riderDistance}, vehicleType=${vehicleType}`);
-                const fareAmount = calculateFare(riderDistance, vehicleType);
-                console.log(`[FARE_DEBUG] Ride ${index}: fareAmount=${fareAmount}`);
+                const estimatedFare = ride.estimatedFare || calculateFare(riderDistance, vehicleType);
+                const riderPays = ride.riderPays || estimatedFare;
+                const savings = ride.savings || Math.round(estimatedFare * 0.3);
+                const estimatedDistance = ride.estimatedDistance || riderDistance;
+                const ratePerKm = ride.ratePerKm || (vehicleType === 'bike' ? 20 : vehicleType === 'ev' ? 40 : 30);
+                console.log(`[FARE_DEBUG] Ride ${index}: estimatedDistance=${estimatedDistance}, vehicleType=${vehicleType}, estimatedFare=${estimatedFare}, riderPays=${riderPays}`);
 
                 // Check if current user has already sent a request to this trip
                 let myRequest = null;
@@ -975,7 +978,7 @@
                 const hasRequestSent = !!myRequest;
                 const requestStatus = myRequest ? myRequest.status : null;
 
-                console.log('Rendering ride with fare:', fareAmount, 'hasRequest:', hasRequestSent, 'status:', requestStatus);
+                console.log('Rendering ride with fare:', riderPays, 'hasRequest:', hasRequestSent, 'status:', requestStatus);
 
                 // Determine button display
                 let buttonHTML = '';
@@ -999,7 +1002,7 @@
                 } else {
                     // Show Join Ride button
                     buttonHTML = `
-                        <button onclick="openJoinRideModal('${ride._id}', '${ride.driver.firstName}', ${fareAmount}, ${ride.availableSeats}, ${ride.occupiedSeats}, ${ride.matchScore})" class="w-full mt-3 bg-primary hover:bg-blue-600 text-white text-sm font-bold h-9 rounded-full transition-all shadow-[0_2px_8px_rgba(19,127,236,0.4)]">
+                        <button onclick="openJoinRideModal('${ride._id}', '${ride.driver.firstName}', ${riderPays}, ${ride.availableSeats}, ${ride.occupiedSeats}, ${ride.matchScore}, ${estimatedFare}, ${savings}, ${estimatedDistance}, ${ratePerKm})" class="w-full mt-3 bg-primary hover:bg-blue-600 text-white text-sm font-bold h-9 rounded-full transition-all shadow-[0_2px_8px_rgba(19,127,236,0.4)]">
                             Request to Join
                         </button>
                     `;
@@ -1039,8 +1042,22 @@
                             <span class="text-white">${ride.pickupDistance !== undefined && ride.pickupDistance !== null ? (ride.pickupDistance === 0 ? 'Same Location' : ride.pickupDistance.toFixed(1) + ' km') : 'N/A'}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span>Your Fare:</span>
-                            <span class="text-secondary font-bold">₹${fareAmount > 0 ? fareAmount : 'N/A'}</span>
+                            <span>Trip Distance:</span>
+                            <span class="text-white">${estimatedDistance.toFixed(1)} km</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 bg-[#151f2a] p-2 rounded-lg border border-[#233648]">
+                        <div class="flex justify-between items-center text-xs text-[#92adc9] mb-1">
+                            <span>Trip Cost (₹${ratePerKm}/km × ${estimatedDistance.toFixed(1)}km)</span>
+                            <span class="text-white font-bold">₹${estimatedFare}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs mb-1">
+                            <span class="text-green-400">Carpool Savings (30%)</span>
+                            <span class="text-green-400 font-bold">-₹${savings}</span>
+                        </div>
+                        <div class="border-t border-[#233648] pt-1 mt-1 flex justify-between items-center">
+                            <span class="text-secondary text-sm font-bold">You Pay</span>
+                            <span class="text-secondary font-bold text-lg">₹${riderPays}</span>
                         </div>
                     </div>
                     ${buttonHTML}
@@ -1676,9 +1693,15 @@
             }
         }
 
-        function openJoinRideModal(rideId, driverName, baseFare, availableSeats, occupiedSeats, matchScore) {
+        function openJoinRideModal(rideId, driverName, riderPays, availableSeats, occupiedSeats, matchScore, estimatedFare, savings, estimatedDistance, ratePerKm) {
             selectedRideForJoin = rideId;
-            currentRideFare = baseFare; // Store the fare for this ride
+            currentRideFare = riderPays; // Store the fare for this ride
+
+            // Default values if not provided (backward compatibility)
+            estimatedFare = estimatedFare || riderPays;
+            savings = savings || 0;
+            estimatedDistance = estimatedDistance || 0;
+            ratePerKm = ratePerKm || 30;
 
             document.getElementById('joinRideContent').innerHTML = `
                 <div class="bg-[#151f2a] p-3 rounded-xl space-y-2">
@@ -1691,8 +1714,22 @@
                         <span class="text-primary font-bold">${matchScore}%</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-[#92adc9]">Your Fare:</span>
-                        <span class="text-secondary font-bold">₹${baseFare}</span>
+                        <span class="text-[#92adc9]">Trip Distance:</span>
+                        <span class="text-white font-bold">${estimatedDistance.toFixed(1)} km</span>
+                    </div>
+                </div>
+                <div class="bg-[#151f2a] p-3 rounded-xl space-y-2 mt-2">
+                    <div class="flex justify-between">
+                        <span class="text-[#92adc9]">Trip Cost (₹${ratePerKm}/km)</span>
+                        <span class="text-white font-bold">₹${estimatedFare}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-green-400">Carpool Savings (30%)</span>
+                        <span class="text-green-400 font-bold">-₹${savings}</span>
+                    </div>
+                    <div class="border-t border-[#233648] pt-2 mt-1 flex justify-between">
+                        <span class="text-secondary font-bold">You Pay</span>
+                        <span class="text-secondary font-bold text-lg">₹${riderPays}</span>
                     </div>
                 </div>
             `;

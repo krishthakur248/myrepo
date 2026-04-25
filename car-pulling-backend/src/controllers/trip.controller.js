@@ -473,7 +473,7 @@ exports.joinTrip = async (req, res) => {
             riderId: userId,
             pickupPoint: normalizeLocation(pickupPoint, trip.pickupLocation),
             dropoffPoint: normalizeLocation(dropoffPoint, trip.dropoffLocation),
-            fare: fare || 0, // Use fare passed from frontend (distance-based: ₹10/km)
+            fare: fare || 0, // Distance-based fare: Bike ₹20/km, Car ₹30/km, EV ₹40/km
             status: 'matched', // Initial status when rider joins
             joinedAt: new Date()
         });
