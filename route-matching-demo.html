@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Route Matching System - Interactive Demo</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Turf.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+  
+  <!-- Leaflet JS -->
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+    }
+    
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 100vh;
+    }
+    
+    #map {
+      height: 100vh;
+      background: #e0e0e0;
+    }
+    
+    .panel {
+      background: white;
+      overflow-y: auto;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+    
+    .header p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    
+    .content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .section {
+      margin-bottom: 25px;
+    }
+    
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .input-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .input-group.full {
+      grid-template-columns: 1fr;
+    }
+    
+    input {
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    }
+    
+    input.error {
+      border-color: #f44336;
+      background: #ffebee;
+    }
+    
+    label {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 4px;
+      display: block;
+      font-weight: 600;
+    }
+    
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    button {
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 12px;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+    
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    
+    .result {
+      background: #f9f9f9;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    
+    .result.success {
+      border-left-color: #4caf50;
+      background: #f1f8f5;
+    }
+    
+    .result.error {
+      border-left-color: #f44336;
+      background: #fef5f5;
+    }
+    
+    .result-title {
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .result.success .result-title {
+      color: #4caf50;
+    }
+    
+    .result.error .result-title {
+      color: #f44336;
+    }
+    
+    .result-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 12px;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    .result-item:last-child {
+      border-bottom: none;
+    }
+    
+    .result-label {
+      color: #666;
+      font-weight: 600;
+    }
+    
+    .result-value {
+      color: #333;
+      text-align: right;
+    }
+    
+    .reason {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.1);
+      font-style: italic;
+      font-size: 11px;
+      color: #666;
+      line-height: 1.5;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #667eea;
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .legend {
+      background: white;
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-bottom: 10px;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    
+    .legend-color {
+      width: 16px;
+      height: 3px;
+      margin-right: 8px;
+      border-radius: 1px;
+    }
+    
+    .color-driver { background: #2196F3; }
+    .color-passenger { background: #f44336; }
+    .color-overlap { background: #4caf50; }
+    .color-pickup { background: #8bc34a; }
+    .color-dropoff { background: #ff9800; }
+    
+    .settings {
+      background: #f0f0f0;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+    
+    .setting-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    
+    .setting-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .setting-item input[type="checkbox"] {
+      margin-right: 8px;
+      cursor: pointer;
+    }
+    
+    .setting-item label {
+      margin: 0;
+      cursor: pointer;
+      flex: 1;
+    }
+    
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      
+      .panel {
+        max-height: 40vh;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      }
+      
+      #map {
+        height: 60vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Map Panel -->
+    <div id="map"></div>
+    
+    <!-- Control Panel -->
+    <div class="panel">
+      <div class="header">
+        <h1>🗺️ Route Matcher</h1>
+        <p>Advanced geographic overlap analysis for ride-sharing</p>
+      </div>
+      
+      <div class="content">
+        <!-- Legend -->
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-color color-driver"></div>
+            <span>Driver Route</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color color-passenger"></div>
+            <span>Passenger Route</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color color-overlap"></div>
+            <span>Shared Path</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color color-pickup"></div>
+            <span>Pickup Point</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color color-dropoff"></div>
+            <span>Dropoff Point</span>
+          </div>
+        </div>
+        
+        <!-- Settings -->
+        <div class="settings">
+          <div class="setting-item">
+            <input type="checkbox" id="useOSRM" checked>
+            <label for="useOSRM">Use real OSRM routing</label>
+          </div>
+          <div class="setting-item">
+            <input type="checkbox" id="showDetails" checked>
+            <label for="showDetails">Show detailed results</label>
+          </div>
+        </div>
+        
+        <!-- Driver Route Section -->
+        <div class="section">
+          <div class="section-title">Driver Route</div>
+          <div class="input-group">
+            <div>
+              <label>Start Latitude</label>
+              <input type="number" id="driverStartLat" value="34.0522" step="0.001">
+            </div>
+            <div>
+              <label>Start Longitude</label>
+              <input type="number" id="driverStartLng" value="-118.2437" step="0.001">
+            </div>
+          </div>
+          <div class="input-group">
+            <div>
+              <label>End Latitude</label>
+              <input type="number" id="driverEndLat" value="34.0852" step="0.001">
+            </div>
+            <div>
+              <label>End Longitude</label>
+              <input type="number" id="driverEndLng" value="-118.2437" step="0.001">
+            </div>
+          </div>
+        </div>
+        
+        <!-- Passenger Route Section -->
+        <div class="section">
+          <div class="section-title">Passenger Route</div>
+          <div class="input-group">
+            <div>
+              <label>Start Latitude</label>
+              <input type="number" id="passengerStartLat" value="34.0522" step="0.001">
+            </div>
+            <div>
+              <label>Start Longitude</label>
+              <input type="number" id="passengerStartLng" value="-118.2437" step="0.001">
+            </div>
+          </div>
+          <div class="input-group">
+            <div>
+              <label>End Latitude</label>
+              <input type="number" id="passengerEndLat" value="34.0852" step="0.001">
+            </div>
+            <div>
+              <label>End Longitude</label>
+              <input type="number" id="passengerEndLng" value="-118.2437" step="0.001">
+            </div>
+          </div>
+          
+          <div class="input-group" style="margin-top: 12px; border-top: 1px solid #eee; padding-top: 12px;">
+            <div>
+              <label>Pickup Latitude</label>
+              <input type="number" id="pickupLat" value="34.0600" step="0.001">
+            </div>
+            <div>
+              <label>Pickup Longitude</label>
+              <input type="number" id="pickupLng" value="-118.2437" step="0.001">
+            </div>
+          </div>
+          <div class="input-group">
+            <div>
+              <label>Dropoff Latitude</label>
+              <input type="number" id="dropoffLat" value="34.0750" step="0.001">
+            </div>
+            <div>
+              <label>Dropoff Longitude</label>
+              <input type="number" id="dropoffLng" value="-118.2437" step="0.001">
+            </div>
+          </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="button-group">
+          <button class="btn-primary" onclick="evaluateMatch()">Evaluate Match</button>
+          <button class="btn-secondary" onclick="clearMap()">Clear Map</button>
+        </div>
+        
+        <!-- Quick Test Cases -->
+        <div class="section">
+          <div class="section-title">Quick Tests</div>
+          <div class="button-group" style="grid-template-columns: 1fr;">
+            <button class="btn-secondary" onclick="testSameRoute()" style="margin-bottom: 8px;">Same Route (100% overlap)</button>
+            <button class="btn-secondary" onclick="testParallel()" style="margin-bottom: 8px;">Parallel Routes (no overlap)</button>
+            <button class="btn-secondary" onclick="testLongDetour()">Too Far Detour</button>
+          </div>
+        </div>
+        
+        <!-- Results Section -->
+        <div class="section" id="resultSection" style="display: none;">
+          <div class="section-title">Matching Result</div>
+          <div id="resultContainer"></div>
+        </div>
+        
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" style="display: none;">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px;">Evaluating routes...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Route Matching Script (embedded) -->
+  <script src="routeMatchingClient.js"></script>
+  
+  <!-- Demo Script -->
+  <script>
+    let map;
+    let drawnLayers = {
+      driverLine: null,
+      passengerLine: null,
+      pickupMarker: null,
+      dropoffMarker: null,
+      overlapLine: null
+    };
+    
+    // Initialize map
+    function initMap() {
+      map = L.map('map').setView([34.0688, -118.2437], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
+    }
+    
+    // Get form values
+    function getFormValues() {
+      return {
+        driver: {
+          startLat: parseFloat(document.getElementById('driverStartLat').value),
+          startLng: parseFloat(document.getElementById('driverStartLng').value),
+          endLat: parseFloat(document.getElementById('driverEndLat').value),
+          endLng: parseFloat(document.getElementById('driverEndLng').value)
+        },
+        passenger: {
+          startLat: parseFloat(document.getElementById('passengerStartLat').value),
+          startLng: parseFloat(document.getElementById('passengerStartLng').value),
+          endLat: parseFloat(document.getElementById('passengerEndLat').value),
+          endLng: parseFloat(document.getElementById('passengerEndLng').value),
+          pickupLat: parseFloat(document.getElementById('pickupLat').value),
+          pickupLng: parseFloat(document.getElementById('pickupLng').value),
+          dropoffLat: parseFloat(document.getElementById('dropoffLat').value),
+          dropoffLng: parseFloat(document.getElementById('dropoffLng').value)
+        }
+      };
+    }
+    
+    // Evaluate match
+    async function evaluateMatch() {
+      const useOSRM = document.getElementById('useOSRM').checked;
+      const values = getFormValues();
+      
+      // Show loading
+      document.getElementById('loadingIndicator').style.display = 'block';
+      document.getElementById('resultSection').style.display = 'none';
+      
+      try {
+        const result = await evaluateRouteMatch(values.driver, values.passenger, useOSRM);
+        
+        // Hide loading
+        document.getElementById('loadingIndicator').style.display = 'none';
+        
+        // Display result
+        displayResult(result, values);
+        
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('loadingIndicator').style.display = 'none';
+        displayError('Error evaluating match: ' + error.message);
+      }
+    }
+    
+    // Display result
+    function displayResult(result, values) {
+      const showDetails = document.getElementById('showDetails').checked;
+      
+      clearMap();
+      
+      let html = '';
+      
+      if (result.isMatch) {
+        html = `
+          <div class="result success">
+            <div class="result-title">✅ MATCH APPROVED</div>
+            <div class="result-item">
+              <span class="result-label">Overlap Ratio</span>
+              <span class="result-value">${result.overlapRatio}%</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">Overlap Distance</span>
+              <span class="result-value">${result.overlapKm} km</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">Pickup Detour</span>
+              <span class="result-value">${result.pickupDetourMeters} m</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">Dropoff Detour</span>
+              <span class="result-value">${result.dropoffDetourMeters} m</span>
+            </div>
+            ${showDetails && result.details ? `
+              <div class="result-item">
+                <span class="result-label">Driver Route</span>
+                <span class="result-value">${result.details.driverRouteKm} km</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Passenger Route</span>
+                <span class="result-value">${result.details.passengerRouteKm} km</span>
+              </div>
+              <div class="result-item">
+                <span class="result-label">Overlapping Segments</span>
+                <span class="result-value">${result.details.overlappingSegments}</span>
+              </div>
+            ` : ''}
+            <div class="reason">${result.reason}</div>
+          </div>
+        `;
+      } else {
+        html = `
+          <div class="result error">
+            <div class="result-title">❌ NO MATCH</div>
+            <div class="reason">${result.reason}</div>
+            ${result.overlapKm !== undefined ? `
+              <div style="margin-top: 8px; font-size: 11px; color: #666;">
+                Current overlap: ${result.overlapRatio}% (${result.overlapKm} km)
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+      
+      document.getElementById('resultContainer').innerHTML = html;
+      document.getElementById('resultSection').style.display = 'block';
+      
+      // Visualize on map
+      visualizeRoutes(values);
+    }
+    
+    // Visualize routes on map
+    async function visualizeRoutes(values) {
+      try {
+        const useOSRM = document.getElementById('useOSRM').checked;
+        
+        let driverLine, passengerLine;
+        
+        if (useOSRM) {
+          driverLine = await getOSRMRoute(
+            values.driver.startLat, values.driver.startLng,
+            values.driver.endLat, values.driver.endLng
+          ) || getSimpleRoute(
+            values.driver.startLat, values.driver.startLng,
+            values.driver.endLat, values.driver.endLng
+          );
+          
+          passengerLine = await getOSRMRoute(
+            values.passenger.startLat, values.passenger.startLng,
+            values.passenger.endLat, values.passenger.endLng
+          ) || getSimpleRoute(
+            values.passenger.startLat, values.passenger.startLng,
+            values.passenger.endLat, values.passenger.endLng
+          );
+        } else {
+          driverLine = getSimpleRoute(
+            values.driver.startLat, values.driver.startLng,
+            values.driver.endLat, values.driver.endLng
+          );
+          
+          passengerLine = getSimpleRoute(
+            values.passenger.startLat, values.passenger.startLng,
+            values.passenger.endLat, values.passenger.endLng
+          );
+        }
+        
+        // Draw driver line (blue)
+        drawnLayers.driverLine = L.geoJSON(driverLine, {
+          style: { color: '#2196F3', weight: 4, opacity: 0.8 }
+        }).addTo(map);
+        
+        // Draw passenger line (red)
+        drawnLayers.passengerLine = L.geoJSON(passengerLine, {
+          style: { color: '#f44336', weight: 4, opacity: 0.8 }
+        }).addTo(map);
+        
+        // Find and draw overlap (green)
+        const overlap = findOverlapSegments(driverLine, passengerLine);
+        if (overlap && overlap.features.length > 0) {
+          drawnLayers.overlapLine = L.geoJSON(overlap, {
+            style: { color: '#4caf50', weight: 6, opacity: 0.9 }
+          }).addTo(map);
+        }
+        
+        // Draw pickup (green circle)
+        drawnLayers.pickupMarker = L.circleMarker(
+          [values.passenger.pickupLat, values.passenger.pickupLng],
+          { radius: 8, color: '#8bc34a', weight: 2, fill: true, fillOpacity: 0.8 }
+        ).bindPopup('Pickup').addTo(map);
+        
+        // Draw dropoff (orange circle)
+        drawnLayers.dropoffMarker = L.circleMarker(
+          [values.passenger.dropoffLat, values.passenger.dropoffLng],
+          { radius: 8, color: '#ff9800', weight: 2, fill: true, fillOpacity: 0.8 }
+        ).bindPopup('Dropoff').addTo(map);
+        
+        // Fit map to bounds
+        const group = new L.featureGroup(Object.values(drawnLayers).filter(l => l));
+        map.fitBounds(group.getBounds(), { padding: [50, 50] });
+        
+      } catch (error) {
+        console.error('Error visualizing routes:', error);
+      }
+    }
+    
+    // Clear map
+    function clearMap() {
+      Object.values(drawnLayers).forEach(layer => {
+        if (layer) map.removeLayer(layer);
+      });
+      drawnLayers = {
+        driverLine: null,
+        passengerLine: null,
+        pickupMarker: null,
+        dropoffMarker: null,
+        overlapLine: null
+      };
+      document.getElementById('resultSection').style.display = 'none';
+    }
+    
+    // Display error
+    function displayError(message) {
+      const html = `
+        <div class="result error">
+          <div class="result-title">⚠️ Error</div>
+          <div class="reason">${message}</div>
+        </div>
+      `;
+      document.getElementById('resultContainer').innerHTML = html;
+      document.getElementById('resultSection').style.display = 'block';
+    }
+    
+    // Quick test: same route
+    function testSameRoute() {
+      document.getElementById('driverStartLat').value = '34.0522';
+      document.getElementById('driverStartLng').value = '-118.2437';
+      document.getElementById('driverEndLat').value = '34.0852';
+      document.getElementById('driverEndLng').value = '-118.2437';
+      
+      document.getElementById('passengerStartLat').value = '34.0522';
+      document.getElementById('passengerStartLng').value = '-118.2437';
+      document.getElementById('passengerEndLat').value = '34.0852';
+      document.getElementById('passengerEndLng').value = '-118.2437';
+      
+      document.getElementById('pickupLat').value = '34.0600';
+      document.getElementById('pickupLng').value = '-118.2437';
+      document.getElementById('dropoffLat').value = '34.0750';
+      document.getElementById('dropoffLng').value = '-118.2437';
+      
+      setTimeout(() => evaluateMatch(), 100);
+    }
+    
+    // Quick test: parallel routes
+    function testParallel() {
+      document.getElementById('driverStartLat').value = '34.0522';
+      document.getElementById('driverStartLng').value = '-118.2437';
+      document.getElementById('driverEndLat').value = '34.0852';
+      document.getElementById('driverEndLng').value = '-118.2437';
+      
+      document.getElementById('passengerStartLat').value = '34.0522';
+      document.getElementById('passengerStartLng').value = '-118.1837'; // Different longitude
+      document.getElementById('passengerEndLat').value = '34.0852';
+      document.getElementById('passengerEndLng').value = '-118.1837';
+      
+      document.getElementById('pickupLat').value = '34.0600';
+      document.getElementById('pickupLng').value = '-118.1837';
+      document.getElementById('dropoffLat').value = '34.0750';
+      document.getElementById('dropoffLng').value = '-118.1837';
+      
+      setTimeout(() => evaluateMatch(), 100);
+    }
+    
+    // Quick test: too far detour
+    function testLongDetour() {
+      document.getElementById('driverStartLat').value = '34.0522';
+      document.getElementById('driverStartLng').value = '-118.2437';
+      document.getElementById('driverEndLat').value = '34.0852';
+      document.getElementById('driverEndLng').value = '-118.2437';
+      
+      document.getElementById('passengerStartLat').value = '34.0522';
+      document.getElementById('passengerStartLng').value = '-118.2437';
+      document.getElementById('passengerEndLat').value = '34.0852';
+      document.getElementById('passengerEndLng').value = '-118.2437';
+      
+      document.getElementById('pickupLat').value = '34.0800'; // Much further away
+      document.getElementById('pickupLng').value = '-118.2000';
+      document.getElementById('dropoffLat').value = '34.0850';
+      document.getElementById('dropoffLng').value = '-118.1800';
+      
+      setTimeout(() => evaluateMatch(), 100);
+    }
+    
+    // Initialize on page load
+    window.addEventListener('load', () => {
+      initMap();
+      console.log('✅ Route Matching Demo initialized');
+      console.log('Available functions:');
+      console.log('- evaluateMatch()');
+      console.log('- clearMap()');
+      console.log('- testSameRoute()');
+      console.log('- testParallel()');
+      console.log('- testLongDetour()');
+    });
+  </script>
+</body>
+</html>
