@@ -311,16 +311,17 @@ exports.findMatches = async (req, res) => {
                 const driverDropoffPt = turf.point(dropoffCoords);
                 const dropoffDistance = turf.distance(riderDropoffPt, driverDropoffPt, { units: 'kilometers' });
 
-                // ── Calculate rider fare: distance(rider pickup → driver dropoff) × rate ──
+                // ── Calculate rider fare ──
+                // Distance = rider pickup → min(rider dropoff, driver dropoff)
+                // i.e. whichever dropoff is closer to rider pickup
+                const riderToRiderDropoffKm = turf.distance(riderPickupPt, riderDropoffPt, { units: 'kilometers' });
                 const riderToDriverDropoffKm = turf.distance(riderPickupPt, driverDropoffPt, { units: 'kilometers' });
+                const tripDistanceKm = Math.min(riderToRiderDropoffKm, riderToDriverDropoffKm);
                 const vehicleType = trip.vehicle || 'car';
                 const ratePerKm = getRatePerKm(vehicleType);
-                const estimatedFare = Math.round(riderToDriverDropoffKm * ratePerKm);
-                const soloTripCost = estimatedFare; // What it would cost alone
-                const savings = Math.round(soloTripCost * 0.3); // 30% savings from carpooling
-                const riderPays = soloTripCost - savings;
+                const estimatedFare = Math.round(tripDistanceKm * ratePerKm);
 
-                console.log(`[FIND-MATCHES] 💰 Rider fare: ${riderToDriverDropoffKm.toFixed(2)}km × ₹${ratePerKm}/km (${vehicleType}) = ₹${estimatedFare}, rider pays ₹${riderPays} (saves ₹${savings})`);
+                console.log(`[FIND-MATCHES] 💰 Fare: riderPickup→riderDropoff=${riderToRiderDropoffKm.toFixed(2)}km, riderPickup→driverDropoff=${riderToDriverDropoffKm.toFixed(2)}km, used=${tripDistanceKm.toFixed(2)}km × ₹${ratePerKm}/km (${vehicleType}) = ₹${estimatedFare}`);
 
                 // matchScore: 0-100 derived from overlapRatio
                 const matchScore = Math.round((matchResult.overlapRatio || 0.5) * 100);
@@ -336,9 +337,7 @@ exports.findMatches = async (req, res) => {
                     dropoffPoint:      matchResult.dropoffPoint,
                     fareSplit:         matchResult.fareSplit,
                     estimatedFare:     estimatedFare,
-                    estimatedDistance: parseFloat(riderToDriverDropoffKm.toFixed(2)),
-                    riderPays:         riderPays,
-                    savings:           savings,
+                    estimatedDistance: parseFloat(tripDistanceKm.toFixed(2)),
                     ratePerKm:         ratePerKm
                 });
 

@@ -371,11 +371,8 @@
                 const driver = trip.driver;
                 const matchPercent = Math.round(trip.matchScore);
                 const estimatedFare = trip.estimatedFare || 0;
-                const riderPays = trip.riderPays || estimatedFare;
-                const savings = trip.savings || 0;
                 const estimatedDistance = trip.estimatedDistance || 0;
                 const ratePerKm = trip.ratePerKm || 30;
-                const vehicleType = (trip.vehicle || 'car').toUpperCase();
 
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-4">
@@ -410,20 +407,13 @@
                         </div>
                     </div>
 
-                    <div class="bg-blue-50 p-3 rounded-lg mb-4">
-                        <div class="flex justify-between items-center mb-1">
-                            <div>
-                                <p class="text-xs text-gray-600">Trip Cost (₹${ratePerKm}/km × ${estimatedDistance.toFixed(1)}km)</p>
-                                <p class="text-lg font-bold text-gray-900">₹${estimatedFare}</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-xs text-green-600">You Save (30%)</p>
-                                <p class="text-lg font-bold text-green-600">₹${savings}</p>
-                            </div>
+                    <div class="bg-blue-50 p-3 rounded-lg mb-4 flex justify-between items-center">
+                        <div>
+                            <p class="text-xs text-gray-600">${estimatedDistance.toFixed(1)} km × ₹${ratePerKm}/km</p>
+                            <p class="text-lg font-bold text-blue-700">₹${estimatedFare}</p>
                         </div>
-                        <div class="border-t border-blue-200 pt-1 mt-1 flex justify-between items-center">
-                            <span class="text-sm font-bold text-blue-700">You Pay</span>
-                            <span class="text-xl font-bold text-blue-700">₹${riderPays}</span>
+                        <div class="text-right">
+                            <p class="text-xs text-gray-500">Estimated Fare</p>
                         </div>
                     </div>
 
@@ -446,8 +436,6 @@
             const content = document.getElementById('modalContent');
 
             const estimatedFare = trip.estimatedFare || 0;
-            const riderPays = trip.riderPays || estimatedFare;
-            const savings = trip.savings || 0;
             const estimatedDistance = trip.estimatedDistance || 0;
             const ratePerKm = trip.ratePerKm || 30;
 
@@ -469,19 +457,11 @@
                         <span class="font-bold text-gray-700">Distance:</span>
                         <span class="text-gray-900">${estimatedDistance.toFixed(1)} km</span>
                     </div>
-                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-sm text-gray-600">Trip Cost (₹${ratePerKm}/km)</span>
-                            <span class="font-bold text-gray-900">₹${estimatedFare}</span>
+                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 flex justify-between items-center">
+                        <div>
+                            <span class="text-sm text-gray-600">${estimatedDistance.toFixed(1)} km × ₹${ratePerKm}/km</span>
                         </div>
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-sm text-green-600">Carpool Savings (30%)</span>
-                            <span class="font-bold text-green-600">-₹${savings}</span>
-                        </div>
-                        <div class="border-t border-blue-200 pt-1 mt-1 flex justify-between items-center">
-                            <span class="font-bold text-blue-700">You Pay</span>
-                            <span class="text-xl font-bold text-blue-700">₹${riderPays}</span>
-                        </div>
+                        <span class="text-xl font-bold text-blue-700">₹${estimatedFare}</span>
                     </div>
                     <div class="bg-yellow-50 p-3 rounded-lg text-sm text-yellow-800 border border-yellow-200">
                         <i class="fas fa-info-circle mr-2"></i>
@@ -516,7 +496,7 @@
 
                 const riderPickup = [pickupLng, pickupLat];   // [lng, lat] format
                 const riderDropoff = [dropoffLng, dropoffLat]; // [lng, lat] format
-                const fare = selectedTrip.riderPays || selectedTrip.estimatedFare || 0;
+                const fare = selectedTrip.estimatedFare || 0;
 
                 console.log('[JOIN] Sending fare:', fare, 'pickup:', riderPickup, 'dropoff:', riderDropoff);
 
