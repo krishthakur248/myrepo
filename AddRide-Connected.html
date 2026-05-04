@@ -44,17 +44,63 @@
         }
         #mapContainer {
             height: 400px;
-            border-radius: 8px;
+            border-radius: 12px;
             z-index: 10;
         }
         .map-modal {
             z-index: 50;
         }
+        /* Enhanced form inputs */
+        input[type="text"], input[type="email"], input[type="password"], input[type="number"], textarea, select {
+            transition: all 0.3s ease;
+            background-color: #f9fafb;
+        }
+        input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        /* Enhanced button effects */
+        button[type="submit"], button[type="button"] {
+            transition: all 0.3s ease;
+        }
+        button[type="submit"]:active, button[type="button"]:active {
+            transform: translateY(0);
+        }
+        /* Vehicle type buttons - prevent distortion on hover */
+        #vehicleTypeCar, #vehicleTypeBike, #vehicleTypeEV {
+            transition: all 0.2s ease;
+            min-height: 44px;
+            min-width: 80px;
+        }
+        /* Override Tailwind hover classes for selected buttons */
+        #vehicleTypeCar.bg-blue-600:hover,
+        #vehicleTypeBike.bg-blue-600:hover,
+        #vehicleTypeEV.bg-blue-600:hover {
+            background-color: #2563eb !important;
+            filter: brightness(1.15);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+        }
+        /* Unselected vehicle type button hover */
+        #vehicleTypeCar:hover:not(.bg-blue-600),
+        #vehicleTypeBike:hover:not(.bg-blue-600),
+        #vehicleTypeEV:hover:not(.bg-blue-600) {
+            border-color: #3b82f6 !important;
+            background-color: #eff6ff !important;
+        }
+        /* Card shadow enhancement */
+        .card-shadow {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: box-shadow 0.3s ease;
+        }
+        .card-shadow:hover {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen">
+<body class="min-h-screen" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 25%, #dbeafe 50%, #bfdbfe 75%, #93c5fd 100%); position: relative;">
+    <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 50%); pointer-events: none; z-index: -1;"></div>
     <!-- Navigation -->
-    <nav class="fixed top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 z-40 rounded-full border border-blue-300/20 bg-white/90 backdrop-blur-xl shadow-lg flex items-center justify-between px-4 sm:px-6 h-14">
+    <nav class="fixed top-1 left-3 right-3 sm:top-1.5 sm:left-4 sm:right-4 z-40 rounded-full border border-white/40 bg-white/95 backdrop-blur-xl shadow-xl flex items-center justify-between px-4 sm:px-6 h-14" style="box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15);">
         <div class="flex items-center gap-2 sm:gap-3 text-gray-900 cursor-pointer" onclick="location.href='./index.html'" title="Back to Home">
             <i class="fas fa-car text-blue-600 text-lg sm:text-xl"></i>
             <span class="font-bold text-sm sm:text-base hidden sm:inline">Quick<span class="text-red-500">Pull</span></span>
@@ -62,35 +108,35 @@
 
         <!-- Navigation Links (hidden on mobile) -->
         <div class="hidden sm:flex items-center gap-1">
-            <button onclick="location.href='./index.html'" class="px-3 py-1.5 text-gray-600 hover:text-gray-900 rounded-full text-xs font-medium transition-colors hover:bg-blue-50/80">Home</button>
-            <button onclick="location.href='./index.html#features'" class="px-3 py-1.5 text-gray-600 hover:text-gray-900 rounded-full text-xs font-medium transition-colors hover:bg-blue-50/80">Features</button>
-            <button onclick="location.href='./index.html#about'" class="px-3 py-1.5 text-gray-600 hover:text-gray-900 rounded-full text-xs font-medium transition-colors hover:bg-blue-50/80">About</button>
-            <button onclick="location.href='./index.html#contact'" class="px-3 py-1.5 text-gray-600 hover:text-gray-900 rounded-full text-xs font-medium transition-colors hover:bg-blue-50/80">Contact</button>
+            <button onclick="location.href='./index.html'" class="px-4 py-2 text-gray-600 hover:text-blue-600 rounded-lg text-xs font-medium transition-all hover:bg-blue-50/90">Home</button>
+            <button onclick="location.href='./index.html#features'" class="px-4 py-2 text-gray-600 hover:text-blue-600 rounded-lg text-xs font-medium transition-all hover:bg-blue-50/90">Features</button>
+            <button onclick="location.href='./index.html#about'" class="px-4 py-2 text-gray-600 hover:text-blue-600 rounded-lg text-xs font-medium transition-all hover:bg-blue-50/90">About</button>
+            <button onclick="location.href='./index.html#contact'" class="px-4 py-2 text-gray-600 hover:text-blue-600 rounded-lg text-xs font-medium transition-all hover:bg-blue-50/90">Contact</button>
         </div>
 
         <div class="flex gap-2 sm:gap-4 items-center">
-            <a href="./Dashboard-Connected.html" class="px-3 sm:px-4 py-1.5 text-blue-600 hover:bg-blue-50/80 rounded-full text-xs sm:text-sm font-medium transition-colors">Dashboard</a>
+            <a href="./Dashboard-Connected.html" class="px-4 sm:px-5 py-2 text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-md hover:shadow-lg">Dashboard</a>
             <!-- Settings Button -->
-            <button class="p-1 sm:p-2 rounded-full hover:bg-blue-50/80 transition-colors" title="Settings">
+            <button class="p-2 rounded-full hover:bg-blue-100 transition-all hover:scale-110" title="Settings">
                 <i class="fas fa-cog text-blue-600 text-lg sm:text-xl"></i>
             </button>
             <!-- Profile Dropdown Button -->
             <div class="relative">
-                <button id="profileBtn" class="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full hover:bg-blue-50/80 transition-colors z-10 relative">
+                <button id="profileBtn" class="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2 rounded-lg hover:bg-blue-100 transition-all z-10 relative">
                     <i class="fas fa-user-circle text-blue-600 text-lg sm:text-xl"></i>
                     <i class="fas fa-chevron-down text-blue-600 text-xs hidden sm:inline"></i>
                 </button>
                 <!-- Dropdown Menu -->
-                <div id="profileDropdown" class="profile-dropdown right-0 sm:right-5 top-12 sm:top-16 w-40 sm:w-48 bg-white border border-blue-200 rounded-lg shadow-2xl hidden">
-                    <div class="p-3 border-b border-blue-200">
-                        <p class="text-sm font-semibold text-gray-800">Profile</p>
-                        <p class="text-xs text-gray-600" id="profileEmail">Loading...</p>
+                <div id="profileDropdown" class="profile-dropdown right-0 sm:right-5 top-12 sm:top-16 w-40 sm:w-48 bg-white border border-blue-200 rounded-xl shadow-2xl hidden" style="box-shadow: 0 10px 40px rgba(59, 130, 246, 0.2);">
+                    <div class="p-4 border-b border-blue-200">
+                        <p class="text-sm font-semibold text-gray-800">👤 Profile</p>
+                        <p class="text-xs text-gray-600 mt-1" id="profileEmail">Loading...</p>
                     </div>
-                    <a href="#" class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors text-sm">
-                        <i class="fas fa-user text-sm"></i>
+                    <a href="#" class="flex items-center gap-2 px-4 py-2.5 text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors text-sm">
+                        <i class="fas fa-user text-sm text-blue-600"></i>
                         My Profile
                     </a>
-                    <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors text-sm border-t border-blue-200">
+                    <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-2.5 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors text-sm border-t border-blue-200 font-medium">
                         <i class="fas fa-sign-out-alt text-sm"></i>
                         Logout
                     </button>
@@ -101,22 +147,27 @@
 
     <div class="w-full max-w-2xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pt-20 sm:pt-24">
         <!-- Header -->
-        <div class="text-center mb-6 sm:mb-8">
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Offer a Ride</h1>
-            <p class="text-xs sm:text-base text-gray-600">Share your journey and earn money</p>
+        <div class="bg-gradient-to-r from-blue-100 to-indigo-100 rounded-xl p-4 sm:p-5 mb-5 border border-blue-200 shadow-md relative overflow-hidden">
+            <!-- Decorative background circles -->
+            <div class="absolute top-0 right-0 w-20 h-20 bg-blue-200/20 rounded-full -mr-8 -mt-8"></div>
+
+            <div class="text-center relative z-10">
+                <h1 class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-700 to-indigo-600 bg-clip-text text-transparent mb-1.5">Offer a Ride</h1>
+                <p class="text-sm sm:text-base text-gray-700 font-medium">Share your journey and earn money</p>
+            </div>
         </div>
 
         <!-- Form Container -->
-        <div class="bg-white rounded-lg shadow-lg p-4 sm:p-8 space-y-4 sm:space-y-6">
+        <div class="bg-white rounded-2xl shadow-2xl p-4 sm:p-8 space-y-4 sm:space-y-6 border border-blue-100" style="box-shadow: 0 10px 40px rgba(59, 130, 246, 0.15);">
 
             <!-- Error/Success Messages -->
-            <div id="errorMessage" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-start gap-3">
-                <i class="fas fa-exclamation-circle mt-0.5"></i>
-                <span id="errorText"></span>
+            <div id="errorMessage" class="hidden bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg flex items-start gap-3 shadow-md">
+                <i class="fas fa-exclamation-circle mt-0.5 text-red-500 flex-shrink-0"></i>
+                <span id="errorText" class="flex-1"></span>
             </div>
-            <div id="successMessage" class="hidden bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg flex items-start gap-3">
-                <i class="fas fa-check-circle mt-0.5"></i>
-                <span id="successText"></span>
+            <div id="successMessage" class="hidden bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg flex items-start gap-3 shadow-md">
+                <i class="fas fa-check-circle mt-0.5 text-green-500 flex-shrink-0"></i>
+                <span id="successText" class="flex-1"></span>
             </div>
 
             <!-- Trip Form -->
@@ -128,18 +179,18 @@
                         <i class="fas fa-map-pin text-green-600 mr-2"></i>Pickup Location
                     </label>
                     <input type="text" id="pickupLocationName" placeholder="Enter pickup location or click 'Get Current Location'"
-                           class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                           class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm bg-gray-50 hover:bg-white transition-all hover:border-blue-300"
                            required>
                     <input type="hidden" id="pickupLat">
                     <input type="hidden" id="pickupLng">
                     <div class="mt-2 flex flex-col sm:flex-row gap-2">
                         <button type="button" onclick="getCurrentLocation('pickup')"
-                                class="text-blue-600 hover:underline text-xs sm:text-sm font-medium whitespace-nowrap">
-                            <i class="fas fa-location-arrow mr-1"></i>Use Current Location
+                                class="px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap">
+                            <i class="fas fa-location-arrow"></i>Current Location
                         </button>
                         <button type="button" onclick="openMapModal('pickup')"
-                                class="text-blue-600 hover:underline text-xs sm:text-sm font-medium whitespace-nowrap">
-                            <i class="fas fa-map mr-1"></i>Pick on Map
+                                class="px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap">
+                            <i class="fas fa-map"></i>Pick on Map
                         </button>
                     </div>
                 </div>
@@ -150,15 +201,15 @@
                         <i class="fas fa-map-pin text-red-600 mr-2"></i>Dropoff Location
                     </label>
                     <input type="text" id="dropoffLocationName" placeholder="Enter destination"
-                           class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                           class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm bg-gray-50 hover:bg-white transition-all hover:border-blue-300"
                            required>
                     <input type="hidden" id="dropoffLat">
                     <input type="hidden" id="dropoffLng">
                     <small class="text-xs text-gray-500">Use address or coordinates (lat,lng)</small>
                     <div class="mt-2">
                         <button type="button" onclick="openMapModal('dropoff')"
-                                class="text-blue-600 hover:underline text-xs sm:text-sm font-medium">
-                            <i class="fas fa-map mr-1"></i>Pick on Map
+                                class="px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center gap-1">
+                            <i class="fas fa-map"></i>Pick on Map
                         </button>
                     </div>
                 </div>
@@ -168,7 +219,7 @@
                     <label class="block text-sm font-bold text-gray-700 mb-2">
                         <i class="fas fa-users mr-2"></i>Available Seats
                     </label>
-                    <select id="availableSeats" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none" required>
+                    <select id="availableSeats" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none bg-gray-50 hover:bg-white transition-all hover:border-blue-300" required>
                         <option value="">Select seats</option>
                         <option value="1">1 Seat</option>
                         <option value="2">2 Seats</option>
@@ -179,36 +230,36 @@
                 </div>
 
                 <!-- Vehicle Info -->
-                <div class="bg-blue-50 p-3 sm:p-4 rounded-lg border-2 border-blue-200">
-                    <h3 class="font-bold text-gray-900 mb-3 flex items-center gap-2 text-sm sm:text-base">
-                        <i class="fas fa-car"></i>Vehicle Information
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-5 rounded-xl border-2 border-blue-200 shadow-sm">
+                    <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2 text-sm sm:text-base">
+                        <i class="fas fa-car text-blue-600"></i>Vehicle Information
                     </h3>
-                    <div class="space-y-3 text-xs sm:text-sm">
+                    <div class="space-y-4 text-xs sm:text-sm">
                         <div>
-                            <label class="font-bold text-gray-700 block mb-2">Vehicle Type:</label>
-                            <div class="flex gap-2 flex-wrap">
-                                <button type="button" id="vehicleTypeCar" class="flex-1 min-w-max py-2 px-2 sm:px-3 rounded-lg border-2 border-gray-300 font-bold text-gray-700 hover:border-blue-500 transition-all flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm" onclick="selectVehicleType('car')">
-                                    <i class="fas fa-car"></i><span>Car</span>
+                            <label class="font-bold text-gray-800 block mb-2">Vehicle Type:</label>
+                            <div class="flex gap-2 sm:gap-3">
+                                <button type="button" id="vehicleTypeCar" class="flex-1 px-3 sm:px-4 py-2.5 rounded-lg border-2 border-gray-300 font-semibold text-gray-700 bg-white transition-all flex items-center justify-center gap-2 text-xs sm:text-sm" onclick="selectVehicleType('car')">
+                                    <i class="fas fa-car text-red-500"></i><span>Car</span>
                                 </button>
-                                <button type="button" id="vehicleTypeBike" class="flex-1 min-w-max py-2 px-2 sm:px-3 rounded-lg border-2 border-gray-300 font-bold text-gray-700 hover:border-blue-500 transition-all flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm" onclick="selectVehicleType('bike')">
-                                    <i class="fas fa-motorcycle"></i><span>Bike</span>
+                                <button type="button" id="vehicleTypeBike" class="flex-1 px-3 sm:px-4 py-2.5 rounded-lg border-2 border-gray-300 font-semibold text-gray-700 bg-white transition-all flex items-center justify-center gap-2 text-xs sm:text-sm" onclick="selectVehicleType('bike')">
+                                    <i class="fas fa-motorcycle text-orange-600"></i><span>Bike</span>
                                 </button>
-                                <button type="button" id="vehicleTypeEV" class="flex-1 min-w-max py-2 px-2 sm:px-3 rounded-lg border-2 border-gray-300 font-bold text-gray-700 hover:border-blue-500 transition-all flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm" onclick="selectVehicleType('ev')">
-                                    <i class="fas fa-bolt"></i><span>EV</span>
+                                <button type="button" id="vehicleTypeEV" class="flex-1 px-3 sm:px-4 py-2.5 rounded-lg border-2 border-gray-300 font-semibold text-gray-700 bg-white transition-all flex items-center justify-center gap-2 text-xs sm:text-sm" onclick="selectVehicleType('ev')">
+                                    <i class="fas fa-bolt text-green-600"></i><span>EV</span>
                                 </button>
                             </div>
                             <input type="hidden" id="vehicleTypeSelect">
                         </div>
                         <div>
-                            <label class="font-bold text-gray-700 block mb-1">Vehicle Number:</label>
-                            <input type="text" id="vehicleNumberInput" placeholder="e.g., ABC-1234" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            <label class="font-bold text-gray-800 block mb-2">Vehicle Number:</label>
+                            <input type="text" id="vehicleNumberInput" placeholder="e.g., ABC-1234" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-sm bg-white hover:border-blue-300 transition-all">
                         </div>
                     </div>
                 </div>
 
                 <!-- Submit Button -->
                 <button type="submit" id="createTripBtn"
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 sm:py-3 rounded-lg transition-all flex items-center justify-center gap-2 shadow-md text-sm sm:text-base">
+                        class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 sm:py-3.5 rounded-xl transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl text-sm sm:text-base">
                     <i class="fas fa-plus"></i>Create Trip
                 </button>
             </form>
@@ -231,29 +282,28 @@
                             <p class="text-sm text-gray-600 font-bold">Trip Code:</p>
                             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-2">
                                 <input type="text" id="tripCode" readonly
-                                       class="flex-1 px-3 py-2 bg-gray-50 border rounded font-bold text-sm sm:text-lg"
-                                       onclick="copyTripCode()">
+                                       class="flex-1 px-4 py-3 bg-white border-2 border-green-200 rounded-lg font-bold text-sm sm:text-lg focus:border-green-400 transition-all cursor-copy hover:bg-green-50">
                                 <button type="button" onclick="copyTripCode()"
-                                        class="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap text-sm sm:text-base">
+                                        class="px-4 sm:px-5 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-bold flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap text-sm sm:text-base shadow-md hover:shadow-lg transition-all">
                                     <i class="fas fa-copy"></i><span>Copy</span>
                                 </button>
                             </div>
                         </div>
 
                         <div>
-                            <p class="text-xs sm:text-sm text-gray-600 font-bold">Trip Details:</p>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mt-2 text-xs sm:text-sm">
-                                <div class="bg-blue-50 p-2 sm:p-3 rounded">
-                                    <p class="text-gray-600">Pickup</p>
-                                    <p class="font-bold text-gray-900 truncate" id="activeTripPickup">-</p>
+                            <p class="text-xs sm:text-sm text-gray-700 font-bold mb-3">📍 Trip Details:</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
+                                <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-3 sm:p-4 rounded-lg border-2 border-green-200">
+                                    <p class="text-gray-600 font-medium text-xs uppercase tracking-wide">📍 Pickup</p>
+                                    <p class="font-bold text-gray-900 truncate mt-1" id="activeTripPickup">-</p>
                                 </div>
-                                <div class="bg-blue-50 p-2 sm:p-3 rounded">
-                                    <p class="text-gray-600">Dropoff</p>
-                                    <p class="font-bold text-gray-900 truncate" id="activeTripDropoff">-</p>
+                                <div class="bg-gradient-to-br from-orange-50 to-red-50 p-3 sm:p-4 rounded-lg border-2 border-orange-200">
+                                    <p class="text-gray-600 font-medium text-xs uppercase tracking-wide">🏁 Dropoff</p>
+                                    <p class="font-bold text-gray-900 truncate mt-1" id="activeTripDropoff">-</p>
                                 </div>
-                                <div class="bg-blue-50 p-2 sm:p-3 rounded">
-                                    <p class="text-gray-600">Available Seats</p>
-                                    <p class="font-bold text-gray-900" id="activeTripSeats">-</p>
+                                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 sm:p-4 rounded-lg border-2 border-blue-200">
+                                    <p class="text-gray-600 font-medium text-xs uppercase tracking-wide">👥 Available Seats</p>
+                                    <p class="font-bold text-gray-900 text-lg mt-1" id="activeTripSeats">-</p>
                                 </div>
                             </div>
                         </div>
@@ -276,13 +326,13 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 border-t pt-4 sm:pt-6">
+                <div class="flex flex-col sm:flex-row gap-3 border-t pt-5 sm:pt-6">
                     <button type="button" onclick="goToDashboard()"
-                            class="flex-1 bg-gray-400 text-white py-2 sm:py-3 rounded-lg hover:bg-gray-500 font-bold transition text-sm sm:text-base">
-                        <i class="fas fa-arrow-left mr-2"></i>Back
+                            class="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 text-white py-3 rounded-lg hover:from-gray-600 hover:to-gray-700 font-bold transition-all shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 text-sm sm:text-base">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
                     </button>
                     <button type="button" onclick="completeActiveTrip()"
-                            class="flex-1 bg-green-600 text-white py-2 sm:py-3 rounded-lg hover:bg-green-700 font-bold transition text-sm sm:text-base">
+                            class="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 font-bold transition-all shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 text-sm sm:text-base">
                         <i class="fas fa-flag-checkered mr-2"></i>Complete Trip
                     </button>
                 </div>
@@ -290,11 +340,11 @@
         </div>
 
         <!-- Info Box -->
-        <div class="mt-8 bg-blue-50 border-l-4 border-blue-600 p-6 rounded-lg">
-            <h3 class="font-bold text-blue-900 mb-2 flex items-center gap-2">
-                <i class="fas fa-info-circle"></i>How it Works
+        <div class="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-600 p-6 rounded-xl shadow-md">
+            <h3 class="font-bold text-blue-900 mb-3 flex items-center gap-2 text-base">
+                <i class="fas fa-lightbulb text-yellow-500"></i>How it Works
             </h3>
-            <ol class="text-blue-800 space-y-2 ml-6 list-decimal">
+            <ol class="text-blue-800 space-y-2 ml-6 list-decimal font-medium">
                 <li>Enter your pickup and dropoff locations</li>
                 <li>Set available seats (riders pay based on distance: Bike ₹20/km, Car ₹30/km, EV ₹40/km)</li>
                 <li>Click "Create Trip" to publish your offer</li>
@@ -305,28 +355,28 @@
     </div>
 
     <!-- Map Modal -->
-    <div id="mapModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center map-modal">
-        <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4">
-            <div class="flex justify-between items-center p-4 border-b">
-                <h2 class="text-xl font-bold"><i class="fas fa-map mr-2"></i>Select Location on Map</h2>
-                <button type="button" onclick="closeMapModal()" class="text-gray-600 hover:text-gray-900 text-2xl">
-                    &times;
+    <div id="mapModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center map-modal backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 overflow-hidden border border-blue-100">
+            <div class="flex justify-between items-center p-5 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2"><i class="fas fa-map text-blue-600"></i>Select Location on Map</h2>
+                <button type="button" onclick="closeMapModal()" class="text-gray-500 hover:text-gray-700 hover:bg-gray-200 p-1 rounded-full transition-all text-2xl font-light">
+                    ×
                 </button>
             </div>
-            <div class="p-4">
-                <div id="mapContainer"></div>
-                <p class="text-sm text-gray-600 mt-3 text-center">Click on the map to select location</p>
-                <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
-                    <p class="text-sm font-semibold">Selected: <span id="selectedCoords" class="text-blue-600">Click on map</span></p>
+            <div class="p-5">
+                <div id="mapContainer" class="rounded-xl overflow-hidden border border-gray-300"></div>
+                <p class="text-sm text-gray-600 mt-3 text-center font-medium">Click on the map to select location</p>
+                <div class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg">
+                    <p class="text-sm font-semibold text-gray-800">Selected: <span id="selectedCoords" class="text-blue-600 font-mono">Click on map</span></p>
                 </div>
             </div>
-            <div class="flex gap-2 p-4 border-t">
+            <div class="flex gap-3 p-5 border-t bg-gray-50">
                 <button type="button" onclick="confirmMapSelection()"
-                        class="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 font-bold">
+                        class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2.5 rounded-lg hover:from-blue-700 hover:to-indigo-700 font-bold transition-all shadow-md hover:shadow-lg">
                     Confirm
                 </button>
                 <button type="button" onclick="closeMapModal()"
-                        class="flex-1 bg-gray-400 text-white py-2 rounded hover:bg-gray-500 font-bold">
+                        class="flex-1 bg-gray-300 text-gray-700 py-2.5 rounded-lg hover:bg-gray-400 font-bold transition-all">
                     Cancel
                 </button>
             </div>
@@ -334,16 +384,16 @@
     </div>
 
     <!-- Chat Modal -->
-    <div id="chatModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl h-4/5 flex flex-col">
+    <div id="chatModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-4/5 flex flex-col border border-blue-100 overflow-hidden">
             <!-- Chat Header -->
-            <div class="flex justify-between items-center p-4 border-b bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+            <div class="flex justify-between items-center p-5 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                 <div>
-                    <h2 class="text-xl font-bold"><i class="fas fa-comments mr-2"></i>Chat with <span id="chatRiderName">Rider</span></h2>
-                    <p class="text-sm text-blue-100">Trip ID: <span id="chatTripId" class="font-mono"></span></p>
+                    <h2 class="text-lg font-bold"><i class="fas fa-comments mr-2"></i>Chat with <span id="chatRiderName">Rider</span></h2>
+                    <p class="text-sm text-blue-100 mt-1">Trip ID: <span id="chatTripId" class="font-mono text-blue-50"></span></p>
                 </div>
-                <button onclick="closeChatModal()" class="text-white hover:bg-blue-600 p-2 rounded-full">
-                    <i class="fas fa-times text-2xl"></i>
+                <button onclick="closeChatModal()" class="text-white hover:bg-blue-700 p-2 rounded-full transition-all hover:scale-110">
+                    <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
 
@@ -356,12 +406,12 @@
             </div>
 
             <!-- Message Input -->
-            <div class="border-t bg-white p-4 flex gap-2">
+            <div class="border-t border-gray-200 bg-white p-4 flex gap-2">
                 <input type="text" id="chatMessageInput" placeholder="Type your message..."
-                       class="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                       class="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none bg-gray-50 hover:bg-white transition-all font-medium"
                        onkeypress="handleChatKeyPress(event)">
-                <button onclick="sendChatMessage()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold transition-colors">
-                    <i class="fas fa-paper-plane mr-1"></i>Send
+                <button onclick="sendChatMessage()" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 font-bold transition-all shadow-md hover:shadow-lg flex items-center gap-1">
+                    <i class="fas fa-paper-plane"></i><span class="hidden sm:inline">Send</span>
                 </button>
             </div>
         </div>
@@ -379,7 +429,7 @@
         // Check authentication on page load
         window.addEventListener('DOMContentLoaded', async () => {
             if (!AuthService.isAuthenticated()) {
-                window.location.href = './Login-Connected.html';
+                window.location.href = './index.html';
                 return;
             }
 
@@ -620,26 +670,25 @@
             // Update hidden input value
             document.getElementById('vehicleTypeSelect').value = type;
 
-            // Update button styles
-            document.getElementById('vehicleTypeCar').classList.remove('border-blue-500', 'text-white', 'bg-blue-600');
-            document.getElementById('vehicleTypeBike').classList.remove('border-blue-500', 'text-white', 'bg-blue-600');
-            document.getElementById('vehicleTypeEV').classList.remove('border-blue-500', 'text-white', 'bg-blue-600');
+            // Reset all buttons to default state
+            document.getElementById('vehicleTypeCar').classList.remove('border-blue-600', 'bg-blue-600', 'text-white');
+            document.getElementById('vehicleTypeBike').classList.remove('border-blue-600', 'bg-blue-600', 'text-white');
+            document.getElementById('vehicleTypeEV').classList.remove('border-blue-600', 'bg-blue-600', 'text-white');
 
             document.getElementById('vehicleTypeCar').classList.add('border-gray-300', 'text-gray-700', 'bg-white');
             document.getElementById('vehicleTypeBike').classList.add('border-gray-300', 'text-gray-700', 'bg-white');
             document.getElementById('vehicleTypeEV').classList.add('border-gray-300', 'text-gray-700', 'bg-white');
 
-            // Highlight selected button
-            const buttonId = `vehicleType${type.charAt(0).toUpperCase() + type.slice(1)}`;
-            if (type === 'ev') {
-                document.getElementById('vehicleTypeEV').classList.remove('border-gray-300', 'text-gray-700', 'bg-white');
-                document.getElementById('vehicleTypeEV').classList.add('border-blue-500', 'text-white', 'bg-blue-600');
-            } else if (type === 'car') {
+            // Highlight selected button with blue color
+            if (type === 'car') {
                 document.getElementById('vehicleTypeCar').classList.remove('border-gray-300', 'text-gray-700', 'bg-white');
-                document.getElementById('vehicleTypeCar').classList.add('border-blue-500', 'text-white', 'bg-blue-600');
+                document.getElementById('vehicleTypeCar').classList.add('border-blue-600', 'bg-blue-600', 'text-white');
             } else if (type === 'bike') {
                 document.getElementById('vehicleTypeBike').classList.remove('border-gray-300', 'text-gray-700', 'bg-white');
-                document.getElementById('vehicleTypeBike').classList.add('border-blue-500', 'text-white', 'bg-blue-600');
+                document.getElementById('vehicleTypeBike').classList.add('border-blue-600', 'bg-blue-600', 'text-white');
+            } else if (type === 'ev') {
+                document.getElementById('vehicleTypeEV').classList.remove('border-gray-300', 'text-gray-700', 'bg-white');
+                document.getElementById('vehicleTypeEV').classList.add('border-blue-600', 'bg-blue-600', 'text-white');
             }
         }
 
