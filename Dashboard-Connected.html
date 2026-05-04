@@ -955,7 +955,31 @@
             const currentUserId = AuthService.getCurrentUser()._id;
             console.log('Current user ID:', currentUserId);
 
-            ridesList.innerHTML = rides.map((ride, index) => {
+            // Filter out rides where user has already sent a request - these should only show in My Trip section
+            const availableOnlyRides = rides.filter(ride => {
+                if (ride.riders && ride.riders.length > 0) {
+                    const myRequest = ride.riders.find(r => {
+                        const riderIdToCheck = r.riderId && r.riderId._id ? r.riderId._id : r.riderId;
+                        return riderIdToCheck === currentUserId || (typeof riderIdToCheck === 'object' && riderIdToCheck.toString() === currentUserId);
+                    });
+                    // Skip this ride if user has already requested
+                    if (myRequest) {
+                        console.log('[FILTER] Skipping ride', ride._id, '- already requested');
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            // Update the count to show only truly available rides
+            document.getElementById('matchCount').textContent = availableOnlyRides.length + ' Found';
+
+            if (availableOnlyRides.length === 0) {
+                ridesList.innerHTML = '<div class="text-center py-8 text-[#92adc9]">No rides available</div>';
+                return;
+            }
+
+            ridesList.innerHTML = availableOnlyRides.map((ride, index) => {
                 // Use backend-calculated fare based on rider pickup → min(rider dropoff, driver dropoff)
                 const vehicleType = (ride.vehicle || ride.driver?.vehicle || 'car').toLowerCase();
                 const estimatedFare = ride.estimatedFare || calculateFare(riderDistance, vehicleType);
@@ -963,53 +987,16 @@
                 const ratePerKm = ride.ratePerKm || (vehicleType === 'bike' ? 20 : vehicleType === 'ev' ? 40 : 30);
                 console.log(`[FARE_DEBUG] Ride ${index}: estimatedDistance=${estimatedDistance}, vehicleType=${vehicleType}, estimatedFare=${estimatedFare}`);
 
-                // Check if current user has already sent a request to this trip
-                let myRequest = null;
-                if (ride.riders && ride.riders.length > 0) {
-                    console.log('Ride riders:', ride.riders);
-                    myRequest = ride.riders.find(r => {
-                        const riderIdToCheck = r.riderId && r.riderId._id ? r.riderId._id : r.riderId;
-                        console.log('Comparing:', riderIdToCheck, 'with', currentUserId, 'equal:', riderIdToCheck === currentUserId || (typeof riderIdToCheck === 'object' && riderIdToCheck.toString() === currentUserId));
-                        return riderIdToCheck === currentUserId || (typeof riderIdToCheck === 'object' && riderIdToCheck.toString() === currentUserId);
-                    });
-                }
-                const hasRequestSent = !!myRequest;
-                const requestStatus = myRequest ? myRequest.status : null;
-
-                console.log('Rendering ride with fare:', estimatedFare, 'hasRequest:', hasRequestSent, 'status:', requestStatus);
-
-                // Determine button display
-                let buttonHTML = '';
-                if (hasRequestSent) {
-                    // Show Already requested status with View and Cancel options
-                    buttonHTML = `
-                        <div class="mt-3">
-                            <div class="w-full bg-green-600/20 border border-green-600/50 text-green-400 text-sm font-bold h-9 rounded-full flex items-center justify-center mb-2">
-                                ✓ Already Requested
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="showDriverDetails('${ride._id}', '${ride.driver.firstName}', '${ride.driver.lastName}', ${ride.driver.rating}, '${ride.vehicle || 'Car'}', '${ride.driver.vehicleColor || 'N/A'}', '${ride.driver.vehicleNumber || 'N/A'}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold h-9 rounded-full transition-all">
-                                    Details
-                                </button>
-                                <button onclick="cancelJoinRequest('${ride._id}')" class="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-bold h-9 rounded-full transition-all">
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    // Show Join Ride button
-                    buttonHTML = `
-                        <button onclick="openJoinRideModal('${ride._id}', '${ride.driver.firstName}', ${estimatedFare}, ${ride.availableSeats}, ${ride.occupiedSeats}, ${ride.matchScore}, ${estimatedDistance}, ${ratePerKm})" class="w-full mt-3 bg-primary hover:bg-blue-600 text-white text-sm font-bold h-9 rounded-full transition-all shadow-[0_2px_8px_rgba(19,127,236,0.4)]">
-                            Request to Join
-                        </button>
-                    `;
-                }
+                // Show Join Ride button (all rides here are truly available - no requests sent)
+                const buttonHTML = `
+                    <button onclick="openJoinRideModal('${ride._id}', '${ride.driver.firstName}', ${estimatedFare}, ${ride.availableSeats}, ${ride.occupiedSeats}, ${ride.matchScore}, ${estimatedDistance}, ${ratePerKm})" class="w-full mt-3 bg-primary hover:bg-blue-600 text-white text-sm font-bold h-9 rounded-full transition-all shadow-[0_2px_8px_rgba(19,127,236,0.4)]">
+                        Request to Join
+                    </button>
+                `;
 
                 return `
-                <div class="ride-card bg-gradient-to-br from-[#192633] to-[#151f2a] p-4 rounded-2xl border ${index === 0 ? 'border-primary/30' : 'border-[#233648]'} ${hasRequestSent ? 'border-green-600/50' : ''} hover:border-[#384b5f] transition-all ${index === 0 ? 'shadow-[0_0_10px_rgba(19,127,236,0.5)]' : ''}">
+                <div class="ride-card bg-gradient-to-br from-[#192633] to-[#151f2a] p-4 rounded-2xl border ${index === 0 ? 'border-primary/30' : 'border-[#233648]'} hover:border-[#384b5f] transition-all ${index === 0 ? 'shadow-[0_0_10px_rgba(19,127,236,0.5)]' : ''}">
                     ${index === 0 ? '<div class="absolute -top-2 -right-2 bg-secondary text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Best Match</div>' : ''}
-                    ${hasRequestSent ? `<div class="absolute -top-2 left-2 bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Request Sent</div>` : ''}
                     <div class="flex gap-4">
                         <div class="relative">
                             <div class="size-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold border-2 border-[#233648]">

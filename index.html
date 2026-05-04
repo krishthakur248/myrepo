@@ -537,15 +537,23 @@
     ══════════════════════════════════ */
     .hamburger {
       display: none; flex-direction: column; gap: 5px;
-      cursor: pointer; padding: 4px; background: none; border: none;
+      cursor: pointer; padding: 8px; background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      transition: all .3s ease;
+    }
+    .hamburger:active {
+      background: rgba(255,255,255,0.15);
+      transform: scale(0.95);
     }
     .hamburger span {
-      display: block; width: 22px; height: 2px;
-      background: #fff; border-radius: 2px; transition: all .3s;
+      display: block; width: 22px; height: 2.5px;
+      background: #fff; border-radius: 2px; transition: all .35s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
-    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
     .hamburger.open span:nth-child(2) { opacity: 0; }
-    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .hamburger.open span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
 
     /* Hide mobile button on desktop */
     #navMobileBtn { display: none !important; }
@@ -553,17 +561,57 @@
     /* Mobile nav drawer */
     .mobile-menu {
       display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(5,5,15,0.97); z-index: 9998;
-      flex-direction: column; align-items: center; justify-content: center; gap: 18px;
-      animation: fadeIn .25s ease;
+      background: linear-gradient(135deg, rgba(5,5,15,0.98) 0%, rgba(15,15,35,0.98) 100%);
+      backdrop-filter: blur(10px);
+      z-index: 9998;
+      flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 12px;
+      animation: slideIn .3s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 100px 20px 30px 20px;
+      overflow-y: auto;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(-100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
     }
     .mobile-menu.open { display: flex; }
     .mobile-menu .nav-pill {
-      font-size: 1.3rem; padding: 14px 48px; border-radius: 14px;
-      background: rgba(255,255,255,0.06);
+      font-size: 1.1rem; padding: 16px 24px; border-radius: 12px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.8);
+      font-weight: 600;
+      transition: all .3s ease;
+      width: 100%;
+      text-align: left;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
-    .mobile-menu .nav-pill.active { background: rgba(224,32,32,0.85); }
-    .mobile-menu .nav-cta { margin-top: 8px; padding: 14px 48px; font-size: 1rem; border-radius: 14px; }
+    .mobile-menu .nav-pill:active {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.2);
+      transform: scale(0.98);
+    }
+    .mobile-menu .nav-pill.active {
+      background: linear-gradient(135deg, rgba(224,32,32,0.9) 0%, rgba(200,20,20,0.8) 100%);
+      color: #fff;
+      border-color: rgba(224,32,32,0.6);
+      box-shadow: 0 8px 20px rgba(224,32,32,0.3);
+    }
+    .mobile-menu .nav-cta {
+      margin-top: 12px; padding: 16px 24px; font-size: 1rem;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #e02020 0%, #c41414 100%);
+      color: #fff;
+      font-weight: 700;
+      border: none;
+      box-shadow: 0 8px 24px rgba(224,32,32,0.4);
+      transition: all .3s ease;
+      width: 100%;
+      cursor: pointer;
+    }
+    .mobile-menu .nav-cta:active {
+      transform: scale(0.98);
+      box-shadow: 0 4px 12px rgba(224,32,32,0.3);
+    }
 
     /* ══════════════════════════════════
        TABLET  (≤1024px)
@@ -586,10 +634,9 @@
 
       /* Navbar: hide links, show hamburger */
       .nav-links { display: none; }
-      .nav-cta:not(#navMobileBtn) { display: none; }
-      #navMobileBtn { display: block !important; margin-left: auto; margin-right: 8px; }
+      #authNavSection { margin-left: auto; }
       .hamburger { display: flex; }
-      #navbar { padding: 12px 20px; top: 10px; left: 10px; right: 10px; }
+      #navbar { padding: 12px 16px; top: 10px; left: 10px; right: 10px; border-radius: 12px; }
 
       /* Hero: stack vertically */
       .hero-content {
@@ -643,6 +690,11 @@
     @media (max-width: 480px) {
       #navbar { top: 8px; left: 8px; right: 8px; padding: 10px 16px; }
       .nav-logo { font-size: 1.05rem; }
+
+      /* Mobile menu adjustments for small screens */
+      .mobile-menu { padding: 90px 16px 20px 16px; gap: 10px; }
+      .mobile-menu .nav-pill { font-size: 1rem; padding: 14px 20px; border-radius: 10px; }
+      .mobile-menu .nav-cta { padding: 14px 20px; font-size: 0.95rem; margin-top: 10px; }
 
       .hero-content { padding: 90px 16px 50px; }
       .hero-h1 { font-size: clamp(1.9rem, 9vw, 2.4rem); }
@@ -705,20 +757,138 @@
   </div>
 
   <nav id="navbar">
-    <a class="nav-logo" onclick="scrollTo('home')">
-      Quick<span>Pull</span>
-    </a>
+    <!-- Left: Hamburger + Logo -->
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <a class="nav-logo" onclick="scrollTo('home')">
+        Quick<span>Pull</span>
+      </a>
+    </div>
+
+    <!-- Center: Nav Links (visible on desktop) -->
     <div class="nav-links">
       <button class="nav-pill active" id="nav-home"     onclick="document.documentElement.scrollTop=0; document.body.scrollTop=0;">Home</button>
       <button class="nav-pill"        id="nav-features" onclick="document.getElementById('features')?.scrollIntoView({behavior:'smooth'})">Features</button>
       <button class="nav-pill"        id="nav-about"    onclick="document.getElementById('about')?.scrollIntoView({behavior:'smooth'})">About</button>
       <button class="nav-pill"        id="nav-contact"  onclick="document.getElementById('contact')?.scrollIntoView({behavior:'smooth'})">Contact</button>
     </div>
-    <button class="nav-cta" id="navDashboardBtn" onclick="location.href='./Dashboard-Connected.html'" style="display:none">Dashboard</button>
-    <button class="nav-cta" id="navMobileBtn" style="display:none; padding:6px 12px; font-size:.7rem; border-radius:20px">Get App</button>
-    <button class="nav-cta" id="navGetAppBtn">Get App</button>
-    <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
-      <span></span><span></span><span></span>
+
+    <!-- Right: Profile + Dashboard Button -->
+    <div id="authNavSection" style="display: none; align-items: center; gap: 12px;">
+      <!-- Profile Dropdown Button -->
+      <div class="relative" style="position: relative; z-index: 50;">
+        <button id="profileBtn" style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #fff;
+          cursor: pointer;
+          transition: all 0.2s;
+        " onmouseover="this.style.background='rgba(255, 255, 255, 0.15)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'">
+          <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </button>
+        <!-- Dropdown Menu -->
+        <div id="profileDropdown" style="
+          position: absolute;
+          right: 0;
+          top: 100%;
+          width: 200px;
+          background: rgba(25, 38, 51, 0.95);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+          backdrop-filter: blur(20px);
+          display: none;
+          flex-direction: column;
+          z-index: 9999;
+          margin-top: 8px;
+        ">
+          <div style="padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+            <p style="font-size: 0.875rem; font-weight: 600; color: #fff;">Profile</p>
+            <p style="font-size: 0.75rem; color: rgba(255, 255, 255, 0.5); margin-top: 4px;" id="profileEmail">Loading...</p>
+          </div>
+          <a href="#" style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          " onmouseover="this.style.background='rgba(255, 255, 255, 0.1); this.style.color=&quot;#fff&quot;'" onmouseout="this.style.background='transparent'; this.style.color='rgba(255, 255, 255, 0.8)'">
+            <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            My Profile
+          </a>
+          <button onclick="logout()" style="
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+          " onmouseover="this.style.background='rgba(255, 107, 107, 0.1)'" onmouseout="this.style.background='none'">
+            <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Logout
+          </button>
+        </div>
+      </div>
+
+      <!-- Dashboard Button -->
+      <button class="nav-cta" onclick="location.href='./Dashboard-Connected.html'" style="
+        background: #e02020;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 24px;
+        font-weight: 700;
+        font-size: 0.875rem;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(224, 32, 32, 0.4);
+        transition: transform 0.2s;
+      " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        Dashboard
+      </button>
+    </div>
+
+    <!-- Get App Button (shown when not authenticated) -->
+    <button id="navGetAppBtn" class="nav-cta" style="
+      background: #e02020;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-weight: 700;
+      font-size: 0.875rem;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(224, 32, 32, 0.4);
+      transition: transform 0.2s;
+    " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+      Get App
     </button>
   </nav>
 
@@ -1315,38 +1485,85 @@
     }
 
     /* ══════════════════════════════════
+       PROFILE DROPDOWN
+    ══════════════════════════════════ */
+    function toggleProfileDropdown() {
+      const dropdown = document.getElementById('profileDropdown');
+      if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+      }
+    }
+
+    function closeProfileDropdown() {
+      const dropdown = document.getElementById('profileDropdown');
+      if (dropdown) {
+        dropdown.style.display = 'none';
+      }
+    }
+
+    function populateProfileEmail() {
+      const user = AuthService.getCurrentUser();
+      if (user && user.email) {
+        const profileEmail = document.getElementById('profileEmail');
+        if (profileEmail) {
+          profileEmail.textContent = user.email;
+        }
+      }
+    }
+
+    function logout() {
+      AuthService.logout();
+      window.location.href = './index.html';
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const profileBtn = document.getElementById('profileBtn');
+      const dropdown = document.getElementById('profileDropdown');
+      if (profileBtn && dropdown && !profileBtn.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    // Profile button click handler
+    document.addEventListener('DOMContentLoaded', function() {
+      const profileBtn = document.getElementById('profileBtn');
+      if (profileBtn) {
+        profileBtn.addEventListener('click', toggleProfileDropdown);
+      }
+      populateProfileEmail();
+    });
+
+    /* ══════════════════════════════════
        INIT & AUTHENTICATION CHECK
-    ═══════*/
+    ══════════════════════════════════ */
     function initializePage() {
       // Check if user is logged in
       if (AuthService.isAuthenticated()) {
         // Hide login/signup form
         document.getElementById('auth-form').parentElement.style.display = 'none';
 
-        // Show Dashboard button, hide Get App button
-        document.getElementById('navDashboardBtn').style.display = '';
+        // Show profile dropdown and Dashboard button
+        const authSection = document.getElementById('authNavSection');
+        if (authSection) {
+          authSection.style.display = 'flex';
+        }
 
-        // Update mobile button to show Dashboard
-        const mobileBtn = document.getElementById('navMobileBtn');
-        mobileBtn.textContent = 'Dashboard';
-        mobileBtn.onclick = function() { location.href='./Dashboard-Connected.html'; };
-        mobileBtn.style.display = '';
+        populateProfileEmail();
 
         document.getElementById('navGetAppBtn').style.display = 'none';
       } else {
         // Show login/signup form
         document.getElementById('auth-form').parentElement.style.display = '';
 
-        // Hide Dashboard button, show Get App button
-        document.getElementById('navDashboardBtn').style.display = 'none';
+        // Hide profile section
+        const authSection = document.getElementById('authNavSection');
+        if (authSection) {
+          authSection.style.display = 'none';
+        }
 
-        // Update mobile button to show Get App
-        const mobileBtn = document.getElementById('navMobileBtn');
-        mobileBtn.textContent = 'Get App';
-        mobileBtn.onclick = function() { /* Get App action */ };
-        mobileBtn.style.display = '';
-
-        document.getElementById('navGetAppBtn').style.display = '';
+        // Show Get App button
+        document.getElementById('navGetAppBtn').style.display = 'block';
       }
 
       renderAuthForm();
