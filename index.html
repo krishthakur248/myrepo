@@ -777,6 +777,21 @@
 
     <!-- Right: Profile + Dashboard Button -->
     <div id="authNavSection" style="display: none; align-items: center; gap: 12px;">
+      <!-- Dashboard Button -->
+      <button class="nav-cta" onclick="location.href='./Dashboard-Connected.html'" style="
+        background: #e02020;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 24px;
+        font-weight: 700;
+        font-size: 0.875rem;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(224, 32, 32, 0.4);
+        transition: transform 0.2s;
+      " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        Dashboard
+      </button>
       <!-- Profile Dropdown Button -->
       <div class="relative" style="position: relative; z-index: 50;">
         <button id="profileBtn" style="
@@ -857,22 +872,6 @@
           </button>
         </div>
       </div>
-
-      <!-- Dashboard Button -->
-      <button class="nav-cta" onclick="location.href='./Dashboard-Connected.html'" style="
-        background: #e02020;
-        color: #fff;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 24px;
-        font-weight: 700;
-        font-size: 0.875rem;
-        cursor: pointer;
-        box-shadow: 0 4px 14px rgba(224, 32, 32, 0.4);
-        transition: transform 0.2s;
-      " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-        Dashboard
-      </button>
     </div>
 
     <!-- Get App Button (shown when not authenticated) -->
