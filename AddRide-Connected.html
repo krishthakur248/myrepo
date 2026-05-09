@@ -239,7 +239,7 @@
         <!-- Header -->
         <div class="text-center mb-5 pt-2">
             <h1 class="text-2xl sm:text-3xl font-bold mb-1" style="color: #3B8BEB;">Offer a Ride</h1>
-            <p class="text-sm sm:text-base text-gray-500">Share your journey and earn money</p>
+            <p class="text-sm sm:text-base text-gray-500">Share your journey and save money</p>
         </div>
 
         <!-- Form Container -->
@@ -415,12 +415,26 @@
                             </div>
                         </div>
 
-                        <!-- Available Seats -->
-                        <div>
-                            <p class="text-xs sm:text-sm text-gray-700 font-bold mb-2">👥 Available Seats</p>
-                            <div class="flex items-center gap-2">
-                                <div id="seatIconsContainer" class="flex items-center gap-1"></div>
-                                <span class="text-lg font-extrabold text-gray-800" id="activeTripSeats">-</span>
+                        <!-- Bottom row: Available Seats & Map Legend -->
+                        <div class="flex flex-col sm:flex-row justify-between items-center mt-4 gap-4">
+                            <!-- Available Seats -->
+                            <div>
+                                <p class="text-xs sm:text-sm text-gray-700 font-bold mb-2">👥 Available Seats</p>
+                                <div class="flex items-center gap-2">
+                                    <div id="seatIconsContainer" class="flex items-center gap-1"></div>
+                                    <span class="text-xl font-extrabold text-gray-800" id="activeTripSeats">-</span>
+                                </div>
+                            </div>
+
+                            <!-- Map Legend -->
+                            <div class="bg-green-50 p-3 rounded-lg border border-green-200 text-xs sm:text-sm shadow-sm min-w-[240px]">
+                                <p class="font-bold text-green-900 mb-2 border-b border-green-200 pb-1">Map Legend</p>
+                                <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                                    <div class="flex items-center gap-2"><img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png" class="h-4" alt="Blue Marker"> <span class="text-green-800 font-medium">Your Pickup</span></div>
+                                    <div class="flex items-center gap-2"><img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png" class="h-4" alt="Green Marker"> <span class="text-green-800 font-medium">Your Dropoff</span></div>
+                                    <div class="flex items-center gap-2"><img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png" class="h-4" alt="Red Marker"> <span class="text-green-800 font-medium">Your Live Location</span></div>
+                                    <div class="flex items-center gap-2"><img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png" class="h-4" alt="Orange Marker"> <span class="text-green-800 font-medium">Rider Pickup</span></div>
+                                </div>
                             </div>
                         </div>
 
@@ -689,6 +703,11 @@
                             coordinates: [data.lng, data.lat]
                         };
                         console.log('[LOCATION] ✅ Updated driver location from driver-location-update event:', window.currentActiveTrip.driver.currentLocation);
+
+                        // Update marker on the active trip map
+                        if (window.activeTripMapInstance && window.driverActiveTripMarker) {
+                            window.driverActiveTripMarker.setLatLng([data.lat, data.lng]);
+                        }
                     }
 
                     // Also store all driver location updates in window.driverLocations for map updates
@@ -1244,6 +1263,57 @@
             } catch (routeErr) {
                 console.warn('[MAP] OSRM routing failed:', routeErr.message);
                 drawFallbackLine();
+            }
+
+            // Add driver live location
+            try {
+                let driverLat = null;
+                let driverLng = null;
+
+                // Try to get actual device location first (since this is the driver's app)
+                if (window.LocationService && typeof window.LocationService.getCurrentLocation === 'function') {
+                    const actualLoc = await window.LocationService.getCurrentLocation();
+                    if (actualLoc && actualLoc.latitude && actualLoc.longitude) {
+                        driverLat = actualLoc.latitude;
+                        driverLng = actualLoc.longitude;
+                    }
+                }
+
+                // Fallback to backend trip object if device location fails
+                if ((!driverLat || !driverLng) && window.currentActiveTrip) {
+                    if (window.currentActiveTrip.driver && window.currentActiveTrip.driver.currentLocation && window.currentActiveTrip.driver.currentLocation.coordinates) {
+                        driverLng = parseFloat(window.currentActiveTrip.driver.currentLocation.coordinates[0]);
+                        driverLat = parseFloat(window.currentActiveTrip.driver.currentLocation.coordinates[1]);
+                    }
+                    else if (window.currentActiveTrip.driverLocation) {
+                        const loc = window.currentActiveTrip.driverLocation;
+                        if (Array.isArray(loc.coordinates)) {
+                            driverLng = parseFloat(loc.coordinates[0]);
+                            driverLat = parseFloat(loc.coordinates[1]);
+                        } else if (loc.lat && loc.lng) {
+                            driverLat = parseFloat(loc.lat);
+                            driverLng = parseFloat(loc.lng);
+                        }
+                    }
+                }
+
+                if (driverLat && driverLng) {
+                    const carIcon = L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+                    });
+
+                    if (window.driverActiveTripMarker) {
+                        window.activeTripMapInstance.removeLayer(window.driverActiveTripMarker);
+                    }
+
+                    window.driverActiveTripMarker = L.marker([driverLat, driverLng], { icon: carIcon })
+                        .addTo(window.activeTripMapInstance)
+                        .bindPopup('<div style="font-weight:bold;">🚗 Your Live Location</div>');
+                }
+            } catch (err) {
+                console.warn('[MAP] Failed to add driver location marker:', err);
             }
 
             // Final size recalc after everything is drawn
