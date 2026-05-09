@@ -686,6 +686,10 @@
                                 lng: position.coords.longitude
                             };
                             document.getElementById('pickupInput').value = `📍 ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
+                            // Reverse geocode to show place name
+                            reverseGeocode(userLocation.lat, userLocation.lng).then(name => {
+                                if (name) document.getElementById('pickupInput').value = `📍 ${name}`;
+                            });
                             showNotification('✓ Location detected', 'success');
                             resolve();
                         },
@@ -715,6 +719,10 @@
                             lng: position.coords.longitude
                         };
                         document.getElementById('pickupInput').value = `📍 ${pickupLocation.lat.toFixed(4)}, ${pickupLocation.lng.toFixed(4)}`;
+                        // Reverse geocode to show place name
+                        reverseGeocode(pickupLocation.lat, pickupLocation.lng).then(name => {
+                            if (name) document.getElementById('pickupInput').value = `📍 ${name}`;
+                        });
                         console.log('[DEBUG] Pickup location set to current location:', pickupLocation);
                         showNotification('✓ Pickup location updated', 'success');
                     },
@@ -814,6 +822,9 @@
                     lng: selectedMapLocation.lng
                 };
                 document.getElementById('pickupInput').value = `📍 ${pickupLocation.lat.toFixed(4)}, ${pickupLocation.lng.toFixed(4)}`;
+                reverseGeocode(pickupLocation.lat, pickupLocation.lng).then(name => {
+                    if (name) document.getElementById('pickupInput').value = `📍 ${name}`;
+                });
                 console.log('[DEBUG] Pickup location set via map:', pickupLocation);
                 showNotification('✓ Pickup location set', 'success');
             } else {
@@ -823,6 +834,11 @@
                 };
                 document.getElementById('destLat').value = selectedMapLocation.lat.toFixed(6);
                 document.getElementById('destLng').value = selectedMapLocation.lng.toFixed(6);
+                // Show destination name in input
+                document.getElementById('destinationInput').value = `${destinationLocation.lat.toFixed(4)}, ${destinationLocation.lng.toFixed(4)}`;
+                reverseGeocode(destinationLocation.lat, destinationLocation.lng).then(name => {
+                    if (name) document.getElementById('destinationInput').value = name;
+                });
                 console.log('Destination updated to:', destinationLocation);
 
                 // Calculate distance but don't show fare preview (depends on vehicle type)
@@ -866,6 +882,28 @@
             }
 
             closeMapModal();
+        }
+
+        // Reverse geocode coordinates to human-readable place name
+        async function reverseGeocode(lat, lng) {
+            try {
+                const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`, {
+                    headers: { 'Accept-Language': 'en' }
+                });
+                const data = await resp.json();
+                if (data && data.address) {
+                    const a = data.address;
+                    const parts = [];
+                    if (a.road || a.pedestrian || a.highway) parts.push(a.road || a.pedestrian || a.highway);
+                    if (a.suburb || a.neighbourhood || a.quarter) parts.push(a.suburb || a.neighbourhood || a.quarter);
+                    if (a.city || a.town || a.village) parts.push(a.city || a.town || a.village);
+                    return parts.length > 0 ? parts.join(', ') : (data.display_name ? data.display_name.split(',').slice(0, 3).join(',') : null);
+                }
+                return null;
+            } catch (e) {
+                console.warn('[GEOCODE] Reverse geocode failed:', e);
+                return null;
+            }
         }
 
         async function searchRides() {
@@ -1500,7 +1538,7 @@
             }
 
             // Initialize map
-            setTimeout(() => {
+            setTimeout(async () => {
                 // Clear and remove old map instance
                 if (window.liveTrackingMap) {
                     window.liveTrackingMap.remove();
@@ -1564,18 +1602,47 @@
                     }).addTo(window.liveTrackingMap).bindPopup('<div class="font-bold">🏁 Destination</div>');
                 }
 
-                // Draw route line
-                const routePoints = [[driverLat, driverLng]];
-                if (pickupLat !== null && pickupLng !== null) routePoints.push([pickupLat, pickupLng]);
-                if (destLat !== null && destLng !== null) routePoints.push([destLat, destLng]);
+                // Draw route using OSRM instead of straight line
+                const routePoints = [];
+                if (pickupLat !== null && pickupLng !== null) routePoints.push({ lat: pickupLat, lng: pickupLng });
+                if (destLat !== null && destLng !== null) routePoints.push({ lat: destLat, lng: destLng });
 
-                if (routePoints.length > 1) {
-                    L.polyline(routePoints, {
-                        color: 'green',
-                        weight: 2,
-                        opacity: 0.7,
-                        dashArray: '5, 5'
+                if (routePoints.length === 2) {
+                    try {
+                        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${routePoints[0].lng},${routePoints[0].lat};${routePoints[1].lng},${routePoints[1].lat}?overview=full&geometries=geojson`;
+                        const routeResp = await fetch(osrmUrl);
+                        const routeData = await routeResp.json();
+                        if (routeData.code === 'Ok' && routeData.routes && routeData.routes.length > 0) {
+                            const coords = routeData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                            const routeLine = L.polyline(coords, {
+                                color: '#3B8BEB', weight: 4, opacity: 0.85, smoothFactor: 1,
+                                lineCap: 'round', lineJoin: 'round'
+                            }).addTo(window.liveTrackingMap);
+                            window.liveTrackingMap.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+                        } else {
+                            // Fallback straight line
+                            L.polyline([[routePoints[0].lat, routePoints[0].lng], [routePoints[1].lat, routePoints[1].lng]], {
+                                color: '#3B8BEB', weight: 3, dashArray: '8, 6', opacity: 0.7
+                            }).addTo(window.liveTrackingMap);
+                        }
+                    } catch (routeErr) {
+                        console.warn('[MAP] OSRM failed, using straight line:', routeErr.message);
+                        L.polyline([[routePoints[0].lat, routePoints[0].lng], [routePoints[1].lat, routePoints[1].lng]], {
+                            color: '#3B8BEB', weight: 3, dashArray: '8, 6', opacity: 0.7
+                        }).addTo(window.liveTrackingMap);
+                    }
+                } else if (routePoints.length === 1) {
+                    // Just driver + one point
+                    L.polyline([[driverLat, driverLng], [routePoints[0].lat, routePoints[0].lng]], {
+                        color: 'green', weight: 2, dashArray: '5, 5', opacity: 0.7
                     }).addTo(window.liveTrackingMap);
+                }
+
+                // Fit all markers in view
+                const allPoints = [[driverLat, driverLng]];
+                routePoints.forEach(p => allPoints.push([p.lat, p.lng]));
+                if (allPoints.length > 1) {
+                    window.liveTrackingMap.fitBounds(allPoints, { padding: [40, 40] });
                 }
 
                 // Calculate and display distance to driver

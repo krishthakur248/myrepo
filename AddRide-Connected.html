@@ -9,6 +9,7 @@
     <title>Car Pulling - Offer a Ride</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@24,400,1" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
@@ -95,9 +96,98 @@
         .card-shadow:hover {
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
         }
+        /* ===== Active Trip Enhanced Styles ===== */
+        @keyframes ripple-wave {
+            0% { transform: scale(0.5); opacity: 0.5; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+        @keyframes pulse-check {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+        }
+        .active-banner-ripple {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            width: 100px; height: 100px; pointer-events: none;
+        }
+        .active-banner-ripple span {
+            position: absolute; inset: 0; border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.25);
+            animation: ripple-wave 2.8s ease-out infinite;
+        }
+        .active-banner-ripple span:nth-child(2) { animation-delay: 0.9s; }
+        .active-banner-ripple span:nth-child(3) { animation-delay: 1.8s; }
+        @keyframes shimmer {
+            0% { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+        }
+        .skeleton-box {
+            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background-size: 400px 100%; animation: shimmer 1.4s infinite; border-radius: 10px;
+        }
+        .seat-svg { transition: transform 0.2s ease; }
+        .seat-svg:hover { transform: scale(1.15); }
+        #activeTripMap { height: 100%; min-height: 140px; border-radius: 12px; z-index: 1; }
+        .trip-code-box {
+            background: #3B8BEB; color: white; font-weight: 800; font-size: 1.3rem;
+            letter-spacing: 0.15em; border-radius: 12px; padding: 12px 20px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .copy-btn {
+            background: rgba(255,255,255,0.18); color: white; border: none;
+            padding: 6px 14px; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; gap: 6px;
+            transition: background 0.2s;
+        }
+        .copy-btn:hover { background: rgba(255,255,255,0.3); }
+        .detail-card {
+            background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+            padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .detail-icon {
+            width: 34px; height: 34px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .rider-card-enhanced {
+            background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+            padding: 14px 16px; display: flex; align-items: center; gap: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.25s ease;
+        }
+        .rider-card-enhanced:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+        .rider-card-enhanced.confirmed { border-color: #86efac; background: #f0fdf4; }
+        .rider-card-enhanced.cancelled { border-color: #fca5a5; background: #fef2f2; opacity: 0.7; }
+        .rider-avatar {
+            width: 42px; height: 42px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-weight: 700;
+            font-size: 1rem; flex-shrink: 0;
+        }
+        .action-btn {
+            padding: 6px 14px; border-radius: 8px; font-size: 0.78rem;
+            font-weight: 600; border: none; cursor: pointer; transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        /* Seat icon system */
+        .seat-icon {
+            font-size: 32px;
+            color: #B0BEC5;
+            opacity: 0.5;
+            transition: color 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+            line-height: 1;
+        }
+        .seat-icon.filled {
+            color: #3B8BEB;
+            opacity: 1;
+        }
+        .seat-icon.driver-seat {
+            font-size: 38px;
+            opacity: 0.7;
+        }
+        .seat-icon.driver-seat.filled {
+            opacity: 1;
+        }
     </style>
 </head>
-<body class="min-h-screen" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 25%, #dbeafe 50%, #bfdbfe 75%, #93c5fd 100%); position: relative;">
+<body class="min-h-screen" style="background: #E8F0FB; position: relative;">
     <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 50%); pointer-events: none; z-index: -1;"></div>
     <!-- Navigation -->
     <nav class="fixed top-1 left-3 right-3 sm:top-1.5 sm:left-4 sm:right-4 z-40 rounded-full border border-white/40 bg-white/95 backdrop-blur-xl shadow-xl flex items-center justify-between px-4 sm:px-6 h-14" style="box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15);">
@@ -147,14 +237,9 @@
 
     <div class="w-full max-w-2xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pt-20 sm:pt-24">
         <!-- Header -->
-        <div class="bg-gradient-to-r from-blue-100 to-indigo-100 rounded-xl p-4 sm:p-5 mb-5 border border-blue-200 shadow-md relative overflow-hidden">
-            <!-- Decorative background circles -->
-            <div class="absolute top-0 right-0 w-20 h-20 bg-blue-200/20 rounded-full -mr-8 -mt-8"></div>
-
-            <div class="text-center relative z-10">
-                <h1 class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-700 to-indigo-600 bg-clip-text text-transparent mb-1.5">Offer a Ride</h1>
-                <p class="text-sm sm:text-base text-gray-700 font-medium">Share your journey and earn money</p>
-            </div>
+        <div class="text-center mb-5 pt-2">
+            <h1 class="text-2xl sm:text-3xl font-bold mb-1" style="color: #3B8BEB;">Offer a Ride</h1>
+            <p class="text-sm sm:text-base text-gray-500">Share your journey and earn money</p>
         </div>
 
         <!-- Form Container -->
@@ -265,76 +350,117 @@
             </form>
 
             <!-- Active Trip Details -->
-            <div id="activeTripSection" class="hidden space-y-4 sm:space-y-6 border-t pt-4 sm:pt-6">
+            <div id="activeTripSection" class="hidden">
+                <!-- Skeleton Loading State -->
+                <div id="tripSkeleton" class="space-y-4">
+                    <div class="skeleton-box" style="height:64px;width:100%"></div>
+                    <div class="skeleton-box" style="height:18px;width:90px"></div>
+                    <div class="skeleton-box" style="height:52px;width:100%"></div>
+                    <div class="skeleton-box" style="height:18px;width:100px"></div>
+                    <div class="flex gap-3"><div class="skeleton-box flex-1" style="height:68px"></div><div class="skeleton-box" style="height:68px;width:160px"></div></div>
+                    <div class="skeleton-box" style="height:18px;width:120px"></div>
+                    <div class="skeleton-box" style="height:36px;width:180px"></div>
+                    <div class="skeleton-box" style="height:120px;width:100%"></div>
+                </div>
 
-                <!-- Trip Info Card -->
-                <div class="bg-green-50 border-2 border-green-200 p-6 rounded-lg">
-                    <div class="flex items-start gap-3 mb-4">
-                        <i class="fas fa-check-circle text-green-600 text-2xl"></i>
-                        <div>
-                            <h3 class="font-bold text-green-900">Active Trip</h3>
-                            <p class="text-green-700 text-sm mt-1">Your ride is live! Share the code with riders</p>
+                <!-- Trip Content (shown after data loads) -->
+                <div id="tripContent" class="hidden">
+                    <!-- Green Container Box wrapping all content -->
+                    <div class="bg-green-50 border-2 border-green-200 p-5 sm:p-6 rounded-xl space-y-5">
+
+                        <!-- Active Trip Banner -->
+                        <div class="relative overflow-hidden rounded-xl" style="background:linear-gradient(135deg,#22C55E 0%,#16A34A 100%);padding:16px 20px;">
+                            <div class="flex items-center gap-3 relative z-10">
+                                <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,0.2);animation:pulse-check 2s infinite;">
+                                    <i class="fas fa-check-circle text-white text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white text-lg leading-tight">Active Trip</h3>
+                                    <p class="text-green-100 text-sm">Your ride is live! Share the code with riders</p>
+                                </div>
+                            </div>
+                            <div class="active-banner-ripple"><span></span><span></span><span></span></div>
                         </div>
-                    </div>
 
-                    <div class="bg-white p-4 rounded border-2 border-green-200 mb-4 space-y-3">
+                        <!-- Trip Code -->
                         <div>
-                            <p class="text-sm text-gray-600 font-bold">Trip Code:</p>
-                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mt-2">
-                                <input type="text" id="tripCode" readonly
-                                       class="flex-1 px-4 py-3 bg-white border-2 border-green-200 rounded-lg font-bold text-sm sm:text-lg focus:border-green-400 transition-all cursor-copy hover:bg-green-50">
+                            <p class="text-sm font-bold text-gray-700 mb-2">Trip Code:</p>
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <input type="text" id="tripCodeDisplay" readonly
+                                       class="flex-1 px-4 py-3 bg-white border-2 border-green-200 rounded-lg font-bold text-sm sm:text-lg focus:border-green-400 transition-all cursor-copy hover:bg-green-50" value="--------">
                                 <button type="button" onclick="copyTripCode()"
-                                        class="px-4 sm:px-5 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-bold flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap text-sm sm:text-base shadow-md hover:shadow-lg transition-all">
-                                    <i class="fas fa-copy"></i><span>Copy</span>
+                                        class="px-5 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-bold flex items-center justify-center gap-2 whitespace-nowrap text-sm shadow-md hover:shadow-lg transition-all">
+                                    <i class="fas fa-copy"></i> Copy
                                 </button>
                             </div>
+                            <input type="hidden" id="tripCode" value="">
                         </div>
 
+                        <!-- Trip Details -->
                         <div>
                             <p class="text-xs sm:text-sm text-gray-700 font-bold mb-3">📍 Trip Details:</p>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
                                 <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-3 sm:p-4 rounded-lg border-2 border-green-200">
                                     <p class="text-gray-600 font-medium text-xs uppercase tracking-wide">📍 Pickup</p>
-                                    <p class="font-bold text-gray-900 truncate mt-1" id="activeTripPickup">-</p>
+                                    <p class="font-bold text-gray-900 truncate mt-1" id="activeTripPickup">Loading...</p>
                                 </div>
                                 <div class="bg-gradient-to-br from-orange-50 to-red-50 p-3 sm:p-4 rounded-lg border-2 border-orange-200">
                                     <p class="text-gray-600 font-medium text-xs uppercase tracking-wide">🏁 Dropoff</p>
-                                    <p class="font-bold text-gray-900 truncate mt-1" id="activeTripDropoff">-</p>
+                                    <p class="font-bold text-gray-900 truncate mt-1" id="activeTripDropoff">Loading...</p>
                                 </div>
-                                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 sm:p-4 rounded-lg border-2 border-blue-200">
-                                    <p class="text-gray-600 font-medium text-xs uppercase tracking-wide">👥 Available Seats</p>
-                                    <p class="font-bold text-gray-900 text-lg mt-1" id="activeTripSeats">-</p>
+                            </div>
+                            <!-- Map (below cards, full width, scrollable) -->
+                            <div class="mt-3 rounded-xl border-2 border-green-200 shadow-sm" style="height:200px;overflow:hidden;">
+                                <div id="activeTripMap" style="height:100%;width:100%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Available Seats -->
+                        <div>
+                            <p class="text-xs sm:text-sm text-gray-700 font-bold mb-2">👥 Available Seats</p>
+                            <div class="flex items-center gap-2">
+                                <div id="seatIconsContainer" class="flex items-center gap-1"></div>
+                                <span class="text-lg font-extrabold text-gray-800" id="activeTripSeats">-</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Rider Requests (outside the green box) -->
+                    <div class="mt-5">
+                        <div class="flex items-center gap-2 mb-3">
+                            <h3 class="font-bold text-lg text-gray-900 flex items-center gap-2">
+                                <i class="fas fa-users text-blue-600"></i>Rider Requests
+                            </h3>
+                            <span class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-bold" id="requestCount">0</span>
+                        </div>
+                        <div id="riderRequestsList" class="space-y-3">
+                            <div class="text-center py-8 text-gray-500" id="emptyRiderState">
+                                <div class="flex justify-center mb-3">
+                                    <div style="position:relative;width:120px;height:70px;">
+                                        <!-- Simple car -->
+                                        <i class="fas fa-car-side" style="font-size:48px;color:#d1d5db;position:absolute;bottom:5px;right:10px;"></i>
+                                        <!-- Person waiting -->
+                                        <i class="fas fa-person" style="font-size:36px;color:#93c5fd;position:absolute;bottom:8px;left:15px;"></i>
+                                    </div>
                                 </div>
+                                <p class="font-semibold text-gray-600 text-sm">No rider requests yet.</p>
+                                <p class="text-gray-400 text-xs mt-1">Stay tuned for trip partners!</p>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Rider Requests Section -->
-                <div>
-                    <h3 class="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                        <i class="fas fa-users text-blue-600"></i>Rider Requests
-                        <span id="requestCount" class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm">0</span>
-                    </h3>
-
-                    <div id="riderRequestsList" class="space-y-3">
-                        <div class="text-center py-8 text-gray-500">
-                            <i class="fas fa-inbox text-4xl text-gray-300 mb-2"></i>
-                            <p>No rider requests yet</p>
-                        </div>
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col sm:flex-row gap-3 mt-5 border-t pt-5">
+                        <button type="button" onclick="goToDashboard()"
+                                class="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 text-white py-3 rounded-lg hover:from-gray-600 hover:to-gray-700 font-bold transition-all shadow-md hover:shadow-lg active:scale-95 text-sm sm:text-base">
+                            <i class="fas fa-arrow-left mr-2"></i>Back
+                        </button>
+                        <button type="button" onclick="completeActiveTrip()"
+                                class="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 font-bold transition-all shadow-md hover:shadow-lg active:scale-95 text-sm sm:text-base">
+                            <i class="fas fa-check mr-2"></i>Complete Trip
+                        </button>
                     </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="flex flex-col sm:flex-row gap-3 border-t pt-5 sm:pt-6">
-                    <button type="button" onclick="goToDashboard()"
-                            class="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 text-white py-3 rounded-lg hover:from-gray-600 hover:to-gray-700 font-bold transition-all shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 text-sm sm:text-base">
-                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-                    </button>
-                    <button type="button" onclick="completeActiveTrip()"
-                            class="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 font-bold transition-all shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 text-sm sm:text-base">
-                        <i class="fas fa-flag-checkered mr-2"></i>Complete Trip
-                    </button>
                 </div>
             </div>
         </div>
@@ -455,14 +581,13 @@
             // Setup Socket.io listeners for real-time message updates
             setupSocketListeners();
 
-            // Add auto-refresh fallback every 10 seconds if trip is active
+            // Lightweight refresh: only update rider requests and seats (no skeleton, no map rebuild)
             setInterval(async () => {
                 const activeTripId = localStorage.getItem('activeTrip');
                 const tripFormHidden = document.getElementById('tripForm').classList.contains('hidden');
                 if (activeTripId && tripFormHidden) {
-                    console.log('[DEBUG] Auto-refreshing trip data...');
                     try {
-                        await loadActiveTrip();
+                        await refreshRiderRequests(activeTripId);
                     } catch (err) {
                         console.error('[DEBUG] Error in auto-refresh:', err);
                     }
@@ -592,7 +717,7 @@
                         // Small delay to ensure backend processed the cancellation
                         setTimeout(async () => {
                             try {
-                                await loadActiveTrip(); // This will refresh the rider list
+                                await refreshRiderRequests(activeTripId); // Lightweight refresh
                                 console.log('[DEBUG] Trip reloaded successfully');
                             } catch(err) {
                                 console.error('[DEBUG] Error reloading trip:', err);
@@ -805,63 +930,51 @@
         }
 
         // Helper function to load trip details
-        async function loadTripDetails(activeTripId) {
+        // Helper function to load trip details
+        async function loadTripDetails(activeTripId, isInitialLoad = true) {
             try {
+                const skeletonEl = document.getElementById('tripSkeleton');
+                const contentEl = document.getElementById('tripContent');
+
+                // Only show skeleton on initial load
+                if (isInitialLoad) {
+                    if (skeletonEl) skeletonEl.classList.remove('hidden');
+                    if (contentEl) contentEl.classList.add('hidden');
+                }
+
                 const response = await TripServiceAPI.getTripDetails(activeTripId);
                 console.log('[DEBUG] getTripDetails response:', response);
 
                 if (response && response.trip) {
                     const trip = response.trip;
-
-                    // STORE TRIP GLOBALLY FOR USE IN MAP FUNCTIONS
                     window.currentActiveTrip = trip;
-
                     console.log('[DEBUG] Trip details loaded, status:', trip.status);
 
-                    // Check if trip is still active
                     if (trip.status !== 'active') {
-                        console.log('[DEBUG] Trip is not active, removing from storage');
                         localStorage.removeItem('activeTrip');
                         localStorage.removeItem('activeTripCode');
-                        // Show form if trip is not active
                         document.getElementById('tripForm').classList.remove('hidden');
                         document.getElementById('activeTripSection').classList.add('hidden');
                         return;
                     }
 
-                    console.log('[DEBUG] Trip is active, showing active trip section');
-
-                    // Join trip room for real-time notifications
-                    NotificationManager.joinTripRoom(trip._id);
-
-                    // **FIX: Ensure Socket.io listeners are re-attached BEFORE starting location tracking**
-                    // Check if driver socket exists and is connected, if not call setupSocketListeners
-                    if (!window.driverSocket || !window.driverSocket.connected) {
-                        console.log('[DEBUG] Driver socket not connected, calling setupSocketListeners()');
-                        setupSocketListeners();
-                    } else {
-                        console.log('[DEBUG] Driver socket already connected');
+                    // Only do heavy setup on initial load
+                    if (isInitialLoad) {
+                        NotificationManager.joinTripRoom(trip._id);
+                        if (!window.driverSocket || !window.driverSocket.connected) {
+                            setupSocketListeners();
+                        }
+                        setTimeout(() => {
+                            LocationService.startLocationTracking();
+                        }, 500);
                     }
 
-                    // Wait a moment for socket to establish before starting location tracking
-                    setTimeout(() => {
-                        // **NEW: Start location tracking for driver to send real-time location to riders**
-                        LocationService.startLocationTracking();
-                        console.log('[DEBUG] Location tracking started for active trip');
-                    }, 500);
-
-                    // Show active trip section and hide form
                     document.getElementById('tripForm').classList.add('hidden');
                     document.getElementById('activeTripSection').classList.remove('hidden');
 
-                    // Display trip details
-                    document.getElementById('tripCode').value = trip.tripCode;
-
-                    // Extract coordinates - handle both flat and nested GeoJSON formats
+                    // Extract coordinates
                     let pickupCoords = trip.pickupLocation.coordinates;
                     let dropoffCoords = trip.dropoffLocation.coordinates;
-
-                    // If coordinates is a GeoJSON object, extract the array
                     if (pickupCoords && typeof pickupCoords === 'object' && pickupCoords.coordinates) {
                         pickupCoords = pickupCoords.coordinates;
                     }
@@ -869,40 +982,63 @@
                         dropoffCoords = dropoffCoords.coordinates;
                     }
 
-                    // Safety check before calling toFixed
-                    if (pickupCoords && Array.isArray(pickupCoords) && pickupCoords.length >= 2) {
-                        document.getElementById('activeTripPickup').textContent =
-                            `📍 ${parseFloat(pickupCoords[1]).toFixed(4)}, ${parseFloat(pickupCoords[0]).toFixed(4)}`;
-                    } else {
-                        document.getElementById('activeTripPickup').textContent = '📍 Location unavailable';
+                    // Set trip code
+                    document.getElementById('tripCodeDisplay').value = trip.tripCode;
+                    document.getElementById('tripCode').value = trip.tripCode;
+
+                    const pLat = parseFloat(pickupCoords[1]);
+                    const pLng = parseFloat(pickupCoords[0]);
+                    const dLat = parseFloat(dropoffCoords[1]);
+                    const dLng = parseFloat(dropoffCoords[0]);
+
+                    // Only update locations and map on initial load
+                    if (isInitialLoad) {
+                        if (pickupCoords && Array.isArray(pickupCoords) && pickupCoords.length >= 2) {
+                            document.getElementById('activeTripPickup').textContent = `${pLat.toFixed(4)}, ${pLng.toFixed(4)}`;
+                        } else {
+                            document.getElementById('activeTripPickup').textContent = 'Location unavailable';
+                        }
+                        if (dropoffCoords && Array.isArray(dropoffCoords) && dropoffCoords.length >= 2) {
+                            document.getElementById('activeTripDropoff').textContent = `${dLat.toFixed(4)}, ${dLng.toFixed(4)}`;
+                        } else {
+                            document.getElementById('activeTripDropoff').textContent = 'Location unavailable';
+                        }
+
+                        // Reverse geocode (only once)
+                        reverseGeocode(pLat, pLng).then(name => {
+                            if (name) document.getElementById('activeTripPickup').textContent = name;
+                        }).catch(() => {});
+                        setTimeout(() => {
+                            reverseGeocode(dLat, dLng).then(name => {
+                                if (name) document.getElementById('activeTripDropoff').textContent = name;
+                            }).catch(() => {});
+                        }, 1200);
+
+                        // Render map (only once)
+                        if (!isNaN(pLat) && !isNaN(pLng) && !isNaN(dLat) && !isNaN(dLng)) {
+                            setTimeout(() => renderActiveTripMap(pLat, pLng, dLat, dLng), 300);
+                        }
                     }
 
-                    if (dropoffCoords && Array.isArray(dropoffCoords) && dropoffCoords.length >= 2) {
-                        document.getElementById('activeTripDropoff').textContent =
-                            `📍 ${parseFloat(dropoffCoords[1]).toFixed(4)}, ${parseFloat(dropoffCoords[0]).toFixed(4)}`;
-                    } else {
-                        document.getElementById('activeTripDropoff').textContent = '📍 Location unavailable';
-                    }
+                    // Calculate seats from accepted riders
+                    const totalSeats = trip.totalSeats || parseInt(trip.availableSeats) || 4;
+                    const acceptedRiders = (trip.riders || []).filter(r => r.status === 'confirmed').length;
+                    const availableSeats = totalSeats - acceptedRiders;
+                    renderSeatIcons(totalSeats, acceptedRiders);
+                    document.getElementById('activeTripSeats').textContent = availableSeats;
 
-                    document.getElementById('activeTripSeats').textContent = trip.availableSeats;
-
-                    // Display rider requests
                     if (trip.riders && trip.riders.length > 0) {
-                        console.log('[DEBUG] Displaying rider requests, count:', trip.riders.length);
                         displayRiderRequests(trip.riders, trip);
                     } else {
-                        console.log('[DEBUG] No rider requests yet');
-                        // Update count to 0
                         document.getElementById('requestCount').textContent = '0';
-                        document.getElementById('riderRequestsList').innerHTML = `
-                            <div class="text-center py-8 text-gray-500">
-                                <i class="fas fa-inbox text-4xl text-gray-300 mb-2"></i>
-                                <p>No rider requests yet</p>
-                            </div>
-                        `;
+                        showEmptyRiderState();
                     }
+
+                    // Hide skeleton, show content
+                    if (skeletonEl) skeletonEl.classList.add('hidden');
+                    if (contentEl) contentEl.classList.remove('hidden');
+
                 } else {
-                    console.log('[DEBUG] No trip data in response, clearing localStorage');
                     localStorage.removeItem('activeTrip');
                     localStorage.removeItem('activeTripCode');
                     document.getElementById('tripForm').classList.remove('hidden');
@@ -910,12 +1046,254 @@
                 }
             } catch (error) {
                 console.error('[ERROR] Error loading trip details:', error);
-                // On error, clear the active trip and show form
-                localStorage.removeItem('activeTrip');
-                localStorage.removeItem('activeTripCode');
-                document.getElementById('tripForm').classList.remove('hidden');
-                document.getElementById('activeTripSection').classList.add('hidden');
+                // Only clear trip on initial load errors
+                if (arguments.length < 2 || isInitialLoad) {
+                    localStorage.removeItem('activeTrip');
+                    localStorage.removeItem('activeTripCode');
+                    document.getElementById('tripForm').classList.remove('hidden');
+                    document.getElementById('activeTripSection').classList.add('hidden');
+                    showNotification('Failed to load trip. Please refresh.', 'error');
+                }
             }
+        }
+
+        // Lightweight refresh — only updates riders and seats without rebuilding UI
+        async function refreshRiderRequests(activeTripId) {
+            try {
+                const response = await TripServiceAPI.getTripDetails(activeTripId);
+                if (response && response.trip) {
+                    const trip = response.trip;
+                    window.currentActiveTrip = trip;
+
+                    if (trip.status !== 'active') {
+                        localStorage.removeItem('activeTrip');
+                        localStorage.removeItem('activeTripCode');
+                        document.getElementById('tripForm').classList.remove('hidden');
+                        document.getElementById('activeTripSection').classList.add('hidden');
+                        return;
+                    }
+
+                    // Update seats
+                    const totalSeats = trip.totalSeats || parseInt(trip.availableSeats) || 4;
+                    const acceptedRiders = (trip.riders || []).filter(r => r.status === 'confirmed').length;
+                    const availableSeats = totalSeats - acceptedRiders;
+                    renderSeatIcons(totalSeats, acceptedRiders);
+                    document.getElementById('activeTripSeats').textContent = availableSeats;
+
+                    // Update riders
+                    if (trip.riders && trip.riders.length > 0) {
+                        displayRiderRequests(trip.riders, trip);
+                    } else {
+                        document.getElementById('requestCount').textContent = '0';
+                        showEmptyRiderState();
+                    }
+                }
+            } catch (err) {
+                console.warn('[REFRESH] Silent refresh failed:', err.message);
+            }
+        }
+
+        // ===== NEW HELPER FUNCTIONS =====
+
+        // Reverse geocode coordinates to human-readable place name
+        async function reverseGeocode(lat, lng) {
+            try {
+                const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`, {
+                    headers: { 'Accept-Language': 'en' }
+                });
+                const data = await resp.json();
+                if (data && data.address) {
+                    const a = data.address;
+                    // Build a short readable name
+                    const parts = [];
+                    if (a.amenity || a.building || a.shop || a.tourism) parts.push(a.amenity || a.building || a.shop || a.tourism);
+                    if (a.road) parts.push(a.road);
+                    if (a.suburb || a.neighbourhood) parts.push(a.suburb || a.neighbourhood);
+                    if (a.city || a.town || a.village) parts.push(a.city || a.town || a.village);
+                    if (parts.length > 0) return parts.slice(0, 3).join(', ');
+                    if (data.display_name) return data.display_name.split(',').slice(0, 3).join(',');
+                }
+                return null;
+            } catch (e) {
+                console.warn('[GEOCODE] Reverse geocode failed:', e);
+                return null;
+            }
+        }
+
+        // Render seat icons using Material Symbols
+        function renderSeatIcons(total, acceptedCount) {
+            const container = document.getElementById('seatIconsContainer');
+            if (!container) return;
+            let html = '';
+            for (let i = 0; i < total; i++) {
+                const isFilled = i < acceptedCount;
+                const isDriver = i === 0;
+                const classes = ['material-symbols-outlined', 'seat-icon'];
+                if (isFilled) classes.push('filled');
+                if (isDriver) classes.push('driver-seat');
+                html += `<span class="${classes.join(' ')}">airline_seat_recline_normal</span>`;
+            }
+            container.innerHTML = html;
+        }
+
+        // Show empty rider state
+        function showEmptyRiderState() {
+            document.getElementById('riderRequestsList').innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <div class="flex justify-center mb-3">
+                        <div style="position:relative;width:120px;height:70px;">
+                            <i class="fas fa-car-side" style="font-size:48px;color:#d1d5db;position:absolute;bottom:5px;right:10px;"></i>
+                            <i class="fas fa-person" style="font-size:36px;color:#93c5fd;position:absolute;bottom:8px;left:15px;"></i>
+                        </div>
+                    </div>
+                    <p class="font-semibold text-gray-600 text-sm">No rider requests yet.</p>
+                    <p class="text-gray-400 text-xs mt-1">Stay tuned for trip partners!</p>
+                </div>`;
+        }
+
+        // Render the inline map with OSRM road routing
+        async function renderActiveTripMap(pickupLat, pickupLng, dropoffLat, dropoffLng) {
+            // Clean up previous instance
+            if (window.activeTripMapInstance) {
+                window.activeTripMapInstance.remove();
+                window.activeTripMapInstance = null;
+            }
+
+            const mapEl = document.getElementById('activeTripMap');
+            if (!mapEl) return;
+
+            // Reset container for Leaflet (avoid "already initialized" error)
+            mapEl.innerHTML = '';
+            mapEl.style.height = '100%';
+            mapEl.style.width = '100%';
+
+            console.log('[MAP] Rendering map with coords:', { pickupLat, pickupLng, dropoffLat, dropoffLng });
+
+            const centerLat = (pickupLat + dropoffLat) / 2;
+            const centerLng = (pickupLng + dropoffLng) / 2;
+
+            window.activeTripMapInstance = L.map(mapEl, {
+                zoomControl: true, attributionControl: false,
+                dragging: true, scrollWheelZoom: true, doubleClickZoom: true
+            }).setView([centerLat, centerLng], 12);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18
+            }).addTo(window.activeTripMapInstance);
+
+            // Force map to recalculate its size (critical for hidden→visible containers)
+            setTimeout(() => {
+                if (window.activeTripMapInstance) {
+                    window.activeTripMapInstance.invalidateSize();
+                }
+            }, 100);
+
+            // Pickup marker (blue)
+            const pickupIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [20, 33], iconAnchor: [10, 33], popupAnchor: [1, -28], shadowSize: [33, 33]
+            });
+            L.marker([pickupLat, pickupLng], { icon: pickupIcon }).addTo(window.activeTripMapInstance).bindPopup('Pickup');
+
+            // Dropoff marker (green)
+            const dropoffIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [20, 33], iconAnchor: [10, 33], popupAnchor: [1, -28], shadowSize: [33, 33]
+            });
+            L.marker([dropoffLat, dropoffLng], { icon: dropoffIcon }).addTo(window.activeTripMapInstance).bindPopup('Dropoff');
+
+            // Draw route — try OSRM first, fallback to straight line
+            const drawFallbackLine = () => {
+                const line = L.polyline([[pickupLat, pickupLng], [dropoffLat, dropoffLng]], {
+                    color: '#3B8BEB', weight: 3, dashArray: '8, 6', opacity: 0.7
+                }).addTo(window.activeTripMapInstance);
+                window.activeTripMapInstance.fitBounds(line.getBounds(), { padding: [25, 25] });
+            };
+
+            try {
+                const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${pickupLng},${pickupLat};${dropoffLng},${dropoffLat}?overview=full&geometries=geojson`;
+                console.log('[MAP] OSRM URL:', osrmUrl);
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+                const routeResp = await fetch(osrmUrl, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                const routeData = await routeResp.json();
+                console.log('[MAP] OSRM response code:', routeData.code);
+
+                if (routeData.code === 'Ok' && routeData.routes && routeData.routes.length > 0) {
+                    const coords = routeData.routes[0].geometry.coordinates;
+                    console.log('[MAP] Route has', coords.length, 'points');
+
+                    // Convert [lng, lat] → [lat, lng] for Leaflet
+                    const routeCoords = coords.map(c => [c[1], c[0]]);
+                    const routeLine = L.polyline(routeCoords, {
+                        color: '#3B8BEB', weight: 5, opacity: 0.85, smoothFactor: 1,
+                        lineCap: 'round', lineJoin: 'round'
+                    }).addTo(window.activeTripMapInstance);
+
+                    window.activeTripMapInstance.fitBounds(routeLine.getBounds(), { padding: [25, 25] });
+                    console.log('[MAP] ✅ OSRM route rendered successfully');
+                } else {
+                    console.warn('[MAP] OSRM returned non-Ok code:', routeData.code, routeData.message);
+                    drawFallbackLine();
+                }
+            } catch (routeErr) {
+                console.warn('[MAP] OSRM routing failed:', routeErr.message);
+                drawFallbackLine();
+            }
+
+            // Final size recalc after everything is drawn
+            setTimeout(() => {
+                if (window.activeTripMapInstance) {
+                    window.activeTripMapInstance.invalidateSize();
+                }
+            }, 500);
+        }
+
+        // Add confirmed rider pickup points to the existing active trip map
+        function addRiderPickupsToMap(riders) {
+            if (!window.activeTripMapInstance) return;
+
+            // Clear previous rider markers
+            if (!window.riderPickupMarkers) window.riderPickupMarkers = [];
+            window.riderPickupMarkers.forEach(m => window.activeTripMapInstance.removeLayer(m));
+            window.riderPickupMarkers = [];
+
+            const getCoords = (location) => {
+                if (!location) return null;
+                if (location.coordinates?.coordinates && Array.isArray(location.coordinates.coordinates)) {
+                    return { lat: parseFloat(location.coordinates.coordinates[1]), lng: parseFloat(location.coordinates.coordinates[0]) };
+                }
+                if (Array.isArray(location.coordinates) && location.coordinates.length === 2) {
+                    return { lat: parseFloat(location.coordinates[1]), lng: parseFloat(location.coordinates[0]) };
+                }
+                if (location.lat && location.lng) {
+                    return { lat: parseFloat(location.lat), lng: parseFloat(location.lng) };
+                }
+                return null;
+            };
+
+            const confirmedRiders = riders.filter(r => r.status === 'confirmed');
+            confirmedRiders.forEach(rider => {
+                const coords = getCoords(rider.pickupPoint);
+                if (!coords || !coords.lat || !coords.lng) return;
+
+                const riderName = `${rider.riderId?.firstName || 'Rider'} ${rider.riderId?.lastName || ''}`.trim();
+                const orangeIcon = L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+                });
+
+                const marker = L.marker([coords.lat, coords.lng], { icon: orangeIcon })
+                    .addTo(window.activeTripMapInstance)
+                    .bindPopup(`<div style="font-weight:bold;">🧑 ${riderName}</div><div style="font-size:12px;">Pickup Point</div>`);
+                window.riderPickupMarkers.push(marker);
+            });
         }
 
         // Display rider requests
@@ -923,20 +1301,13 @@
             document.getElementById('requestCount').textContent = riders.length;
 
             if (riders.length === 0) {
-                document.getElementById('riderRequestsList').innerHTML = `
-                    <div class="text-center py-8 text-gray-500">
-                        <i class="fas fa-inbox text-4xl text-gray-300 mb-2"></i>
-                        <p>No rider requests yet</p>
-                    </div>
-                `;
+                showEmptyRiderState();
                 return;
             }
 
             // Get driver's location from active trip
             let driverLat = 30.836427;
             let driverLng = 76.960320;
-
-            // Use trip's driver location if available
             if (trip && trip.driverLocation) {
                 if (Array.isArray(trip.driverLocation.coordinates)) {
                     driverLng = parseFloat(trip.driverLocation.coordinates[0]);
@@ -948,96 +1319,89 @@
             }
 
             const requestsList = riders.map(rider => {
-                // Extract coordinates
                 const getCoords = (location) => {
                     if (!location) return { lat: null, lng: null };
-
                     if (location.coordinates?.coordinates && Array.isArray(location.coordinates.coordinates)) {
-                        return {
-                            lat: parseFloat(location.coordinates.coordinates[1]),
-                            lng: parseFloat(location.coordinates.coordinates[0])
-                        };
+                        return { lat: parseFloat(location.coordinates.coordinates[1]), lng: parseFloat(location.coordinates.coordinates[0]) };
                     }
                     if (Array.isArray(location.coordinates) && location.coordinates.length === 2) {
-                        return {
-                            lat: parseFloat(location.coordinates[1]),
-                            lng: parseFloat(location.coordinates[0])
-                        };
+                        return { lat: parseFloat(location.coordinates[1]), lng: parseFloat(location.coordinates[0]) };
                     }
                     return { lat: null, lng: null };
                 };
 
                 const pickupCoords = getCoords(rider.pickupPoint);
                 const dropoffCoords = getCoords(rider.dropoffPoint || rider.dropoffLocation);
-                console.log(`[DEBUG] Rider pickup point:`, rider.pickupPoint, `Extracted coords:`, pickupCoords);
-                console.log(`[DEBUG] Rider dropoff point:`, rider.dropoffPoint || rider.dropoffLocation, `Extracted coords:`, dropoffCoords);
-                const riderName = `${rider.riderId?.firstName || 'Rider'} ${rider.riderId?.lastName || ''}`;
+                const riderName = `${rider.riderId?.firstName || 'Rider'} ${rider.riderId?.lastName || ''}`.trim();
                 const tripId = localStorage.getItem('activeTrip');
-                // Ensure riderId is a string ID
                 const riderId = typeof rider.riderId === 'string' ? rider.riderId : (rider.riderId?._id || rider.riderId);
                 const riderStatus = rider.status || 'matched';
 
-                // Calculate distance between driver and rider pickup
-                let distance = 'N/A';
-                if (pickupCoords.lat && pickupCoords.lng) {
-                    distance = calculateDistance(driverLat, driverLng, pickupCoords.lat, pickupCoords.lng).toFixed(1) + ' km';
+                // Avatar: initials from name
+                const initials = riderName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+                const avatarColors = ['#3B8BEB', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#EF4444'];
+                const avatarColor = avatarColors[riderName.length % avatarColors.length];
+
+                // Time ago
+                const requestedAt = rider.requestedAt || rider.createdAt || rider.joinedAt;
+                let timeAgo = '';
+                if (requestedAt) {
+                    const diff = Date.now() - new Date(requestedAt).getTime();
+                    const mins = Math.floor(diff / 60000);
+                    if (mins < 1) timeAgo = 'Just now';
+                    else if (mins < 60) timeAgo = `${mins}m ago`;
+                    else if (mins < 1440) timeAgo = `${Math.floor(mins/60)}h ago`;
+                    else timeAgo = `${Math.floor(mins/1440)}d ago`;
                 }
 
-                // Different UI based on rider status
-                let actionButtonsHTML = '';
+                // Action buttons based on status + Trip Full logic
+                const _totalSeats = trip.totalSeats || parseInt(trip.availableSeats) || 4;
+                const _confirmedCount = riders.filter(r => r.status === 'confirmed').length;
+                const _isFull = _confirmedCount >= _totalSeats;
+
+                let actionsHTML = '';
                 if (riderStatus === 'confirmed') {
-                    // Accepted rider - show message button, map button, and status badge
-                    actionButtonsHTML = `
-                        <div class="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:gap-3 sm:items-center">
-                            <span class="px-3 sm:px-4 py-2 bg-green-100 text-green-700 rounded-full text-xs sm:text-sm font-bold border-2 border-green-400 flex items-center justify-center gap-2 whitespace-nowrap sm:w-auto">
-                                <i class="fas fa-check-circle"></i>Accepted
-                            </span>
-                            <button class="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium flex-1 whitespace-nowrap" onclick="showRiderMap('${rider._id}', ${pickupCoords.lat}, ${pickupCoords.lng}, ${dropoffCoords.lat}, ${dropoffCoords.lng}, '${riderName}')">
-                                <i class="fas fa-map-location-dot mr-1"></i>Map
-                            </button>
-                            <button class="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium flex-1 whitespace-nowrap" onclick="openChat('${riderId}', '${riderName}', '${tripId}')">
-                                <i class="fas fa-comments mr-1"></i>Message
-                            </button>
-                        </div>
-                    `;
+                    actionsHTML = `
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="action-btn" style="background:#dcfce7;color:#16a34a;cursor:default;"><i class="fas fa-check-circle"></i> Accepted</span>
+                            <button class="action-btn" style="background:#3B8BEB;color:white;" onclick="openChat('${riderId}', '${riderName.replace(/'/g, "\\'")}', '${tripId}')"><i class="fas fa-comments"></i> Chat</button>
+                        </div>`;
                 } else if (riderStatus === 'cancelled') {
-                    // Cancelled rider - show rejected badge only
-                    actionButtonsHTML = `
-                        <div class="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:gap-3 sm:items-center">
-                            <span class="px-3 sm:px-4 py-2 bg-red-100 text-red-700 rounded-full text-xs sm:text-sm font-bold border-2 border-red-400 flex items-center justify-center gap-2 whitespace-nowrap sm:w-auto">
-                                <i class="fas fa-times-circle"></i>Rejected
-                            </span>
-                        </div>
-                    `;
+                    actionsHTML = `<span class="action-btn" style="background:#fee2e2;color:#dc2626;cursor:default;"><i class="fas fa-times-circle"></i> Rejected</span>`;
+                } else if (_isFull) {
+                    actionsHTML = `
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="action-btn" style="background:#e5e7eb;color:#9ca3af;cursor:not-allowed;"><i class="fas fa-ban"></i> Trip Full</span>
+                            <button class="action-btn" style="background:#ef4444;color:white;" onclick="rejectRiderRequest('${riderId}', '${riderName.replace(/'/g, "\\'")}', '${tripId}')"><i class="fas fa-times"></i> Reject</button>
+                        </div>`;
                 } else {
-                    // Pending rider - show distance, map, accept, and reject buttons
-                    actionButtonsHTML = `
-                        <div class="flex gap-2 flex-wrap">
-                            <button class="flex-1 min-w-max px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium" onclick="showRiderMap('${rider._id}', ${pickupCoords.lat}, ${pickupCoords.lng}, ${dropoffCoords.lat}, ${dropoffCoords.lng}, '${riderName}')">
-                                <i class="fas fa-map mr-1"></i>Map
-                            </button>
-                            <button class="flex-1 min-w-max px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs sm:text-sm font-medium" onclick="acceptRiderRequest('${riderId}', '${riderName}', '${tripId}')">
-                                <i class="fas fa-check mr-1"></i>Accept
-                            </button>
-                            <button class="flex-1 min-w-max px-2 sm:px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs sm:text-sm font-medium" onclick="rejectRiderRequest('${riderId}', '${riderName}', '${tripId}')">
-                                <i class="fas fa-times mr-1"></i>Reject
-                            </button>
-                        </div>
-                    `;
+                    actionsHTML = `
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button class="action-btn" style="background:#22C55E;color:white;" onclick="acceptRiderRequest('${riderId}', '${riderName.replace(/'/g, "\\'")}', '${tripId}')"><i class="fas fa-check"></i> Accept</button>
+                            <button class="action-btn" style="background:#ef4444;color:white;" onclick="rejectRiderRequest('${riderId}', '${riderName.replace(/'/g, "\\'")}', '${tripId}')"><i class="fas fa-times"></i> Reject</button>
+                        </div>`;
                 }
+
+                const statusClass = riderStatus === 'confirmed' ? 'confirmed' : riderStatus === 'cancelled' ? 'cancelled' : '';
 
                 return `
-                <div class="bg-blue-50 border-2 border-blue-200 p-3 sm:p-4 rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 transition-all duration-300 ${riderStatus === 'confirmed' ? 'border-green-400 bg-green-50' : riderStatus === 'cancelled' ? 'border-red-400 bg-red-50' : ''}" data-rider-id="${rider._id}">
-                    <div class="min-w-0">
-                        <h4 class="font-bold text-sm sm:text-base text-gray-900">${riderName}</h4>
-                        <p class="text-xs sm:text-sm text-gray-600 mt-1">Fare: ₹${rider.fare || 'TBD'}</p>
+                <div class="rider-card-enhanced ${statusClass}" data-rider-id="${rider._id}">
+                    <div class="rider-avatar" style="background:${avatarColor};color:white;">${initials}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h4 class="font-bold text-sm text-gray-900">${riderName}</h4>
+                            ${timeAgo ? `<span class="text-xs text-gray-400">${timeAgo}</span>` : ''}
+                        </div>
+                        <p class="text-xs text-gray-500 mt-0.5">Fare: ₹${rider.fare || 'TBD'} ${rider.seatsRequested ? `· ${rider.seatsRequested} seat${rider.seatsRequested > 1 ? 's' : ''}` : ''}</p>
+                        <div class="mt-2">${actionsHTML}</div>
                     </div>
-                    ${actionButtonsHTML}
-                </div>
-            `;
+                </div>`;
             }).join('');
 
             document.getElementById('riderRequestsList').innerHTML = requestsList;
+
+            // Show confirmed riders' pickup points on the existing map
+            addRiderPickupsToMap(riders);
         }
 
         // Calculate distance between two coordinates using Haversine formula
@@ -1327,6 +1691,12 @@
                 LocationService.stopLocationTracking();
                 console.log('[DEBUG] Location tracking stopped');
 
+                // Clean up map
+                if (window.activeTripMapInstance) {
+                    window.activeTripMapInstance.remove();
+                    window.activeTripMapInstance = null;
+                }
+
                 // Clear active trip
                 localStorage.removeItem('activeTrip');
                 localStorage.removeItem('activeTripCode');
@@ -1429,78 +1799,15 @@
                 console.log('Trip response:', response);
 
                 // The API returns success: true and trip object
-                if (response && response.success && response.trip) {
+                if (response && (response.success || response.trip)) {
                     const trip = response.trip;
-
-                    // Hide form and show active trip section
-                    document.getElementById('tripForm').classList.add('hidden');
-                    document.getElementById('activeTripSection').classList.remove('hidden');
 
                     // Store active trip ID
                     localStorage.setItem('activeTrip', trip._id);
                     localStorage.setItem('activeTripCode', trip.tripCode);
 
-                    // Display trip details
-                    document.getElementById('tripCode').value = trip.tripCode;
-
-                    // Extract coordinates - handle both flat and nested GeoJSON formats
-                    let pickupCoords = trip.pickupLocation.coordinates;
-                    let dropoffCoords = trip.dropoffLocation.coordinates;
-
-                    // If coordinates is a GeoJSON object, extract the array
-                    if (pickupCoords && typeof pickupCoords === 'object' && pickupCoords.coordinates) {
-                        pickupCoords = pickupCoords.coordinates;
-                    }
-                    if (dropoffCoords && typeof dropoffCoords === 'object' && dropoffCoords.coordinates) {
-                        dropoffCoords = dropoffCoords.coordinates;
-                    }
-
-                    // Safety check before calling toFixed
-                    if (pickupCoords && Array.isArray(pickupCoords) && pickupCoords.length >= 2) {
-                        document.getElementById('activeTripPickup').textContent =
-                            `📍 ${parseFloat(pickupCoords[1]).toFixed(4)}, ${parseFloat(pickupCoords[0]).toFixed(4)}`;
-                    } else {
-                        document.getElementById('activeTripPickup').textContent = '📍 Location unavailable';
-                    }
-
-                    if (dropoffCoords && Array.isArray(dropoffCoords) && dropoffCoords.length >= 2) {
-                        document.getElementById('activeTripDropoff').textContent =
-                            `📍 ${parseFloat(dropoffCoords[1]).toFixed(4)}, ${parseFloat(dropoffCoords[0]).toFixed(4)}`;
-                    } else {
-                        document.getElementById('activeTripDropoff').textContent = '📍 Location unavailable';
-                    }
-
-                    document.getElementById('activeTripSeats').textContent = trip.availableSeats;
-                    document.getElementById('riderRequestsList').innerHTML = `
-                        <div class="text-center py-8 text-gray-500">
-                            <i class="fas fa-inbox text-4xl text-gray-300 mb-2"></i>
-                            <p>No rider requests yet</p>
-                        </div>
-                    `;
-
-                    showNotification('✓ Trip created successfully!', 'success');
-                } else if (response && response.trip) {
-                    // Handle case where API returns trip but no success flag
-                    const trip = response.trip;
-
-                    document.getElementById('tripForm').classList.add('hidden');
-                    document.getElementById('activeTripSection').classList.remove('hidden');
-
-                    localStorage.setItem('activeTrip', trip._id);
-                    localStorage.setItem('activeTripCode', trip.tripCode);
-
-                    document.getElementById('tripCode').value = trip.tripCode;
-                    document.getElementById('activeTripPickup').textContent =
-                        `📍 ${trip.pickupLocation.coordinates[1].toFixed(4)}, ${trip.pickupLocation.coordinates[0].toFixed(4)}`;
-                    document.getElementById('activeTripDropoff').textContent =
-                        `📍 ${trip.dropoffLocation.coordinates[1].toFixed(4)}, ${trip.dropoffLocation.coordinates[0].toFixed(4)}`;
-                    document.getElementById('activeTripSeats').textContent = trip.availableSeats;
-                    document.getElementById('riderRequestsList').innerHTML = `
-                        <div class="text-center py-8 text-gray-500">
-                            <i class="fas fa-inbox text-4xl text-gray-300 mb-2"></i>
-                            <p>No rider requests yet</p>
-                        </div>
-                    `;
+                    // Use loadTripDetails to populate the enhanced UI consistently
+                    await loadTripDetails(trip._id);
 
                     showNotification('✓ Trip created successfully!', 'success');
                 } else {
@@ -1517,9 +1824,20 @@
 
         // Copy trip code
         function copyTripCode() {
-            const tripCode = document.getElementById('tripCode').value;
-            navigator.clipboard.writeText(tripCode);
-            showNotification('✓ Trip code copied!', 'success');
+            const displayEl = document.getElementById('tripCodeDisplay');
+            const tripCode = displayEl ? (displayEl.value || displayEl.textContent) : document.getElementById('tripCode').value;
+            navigator.clipboard.writeText(tripCode).then(() => {
+                showNotification('✓ Trip code copied to clipboard!', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const input = document.createElement('input');
+                input.value = tripCode;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                showNotification('✓ Trip code copied!', 'success');
+            });
         }
 
         // Go to dashboard
