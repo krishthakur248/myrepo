@@ -173,12 +173,69 @@
                 display: flex !important;
             }
         }
+        /* ═══ Enhanced Navbar ═══ */
+        #dashNav {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+        }
+        #dashNav.scrolled {
+            background: rgba(0,0,0,0.8) !important;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04) !important;
+            border-color: rgba(255,255,255,0.06) !important;
+        }
+        #dashNav .dash-nav-link {
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #dashNav .dash-nav-link::after {
+            content: ''; position: absolute;
+            bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 0; height: 2px; background: #137fec;
+            border-radius: 2px;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #dashNav .dash-nav-link:hover::after { width: 55%; }
+        #dashNav .dash-nav-link:hover {
+            color: #fff !important;
+            background: rgba(19,127,236,0.1) !important;
+        }
+        /* ═══ Skeleton Loading ═══ */
+        @keyframes shimmerDash {
+            0% { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+        }
+        .skeleton-shimmer {
+            background: linear-gradient(90deg, #192633 25%, #253545 50%, #192633 75%);
+            background-size: 400px 100%;
+            animation: shimmerDash 1.4s ease infinite;
+            border-radius: 8px;
+        }
+        .skeleton-card {
+            background: linear-gradient(135deg, #192633 0%, #151f2a 100%);
+            border: 1px solid #233648;
+            border-radius: 16px;
+            padding: 16px;
+        }
+        #mapSkeleton {
+            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                        filter 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0px);
+        }
+        #mapSkeleton.fade-out {
+            opacity: 0;
+            transform: scale(1.02);
+            filter: blur(8px);
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="bg-background-dark text-white font-display overflow-hidden h-screen flex flex-col">
 
     <!-- Top Navigation -->
-    <header class="fixed top-1 left-3 right-3 sm:top-2 sm:left-4 sm:right-4 z-40 rounded-full border border-white/12 bg-black/40 backdrop-blur-xl shadow-lg flex items-center justify-between px-4 sm:px-6 h-14">
+    <header id="dashNav" class="fixed top-1 left-3 right-3 sm:top-2 sm:left-4 sm:right-4 z-40 rounded-2xl border border-white/12 bg-black/40 backdrop-blur-xl shadow-lg flex items-center justify-between px-4 sm:px-6 h-14">
         <div class="flex items-center gap-2 sm:gap-3 text-white cursor-pointer" onclick="location.href='./index.html'" title="Back to Home">
             <div class="w-7 h-7 bg-primary/20 rounded-full flex items-center justify-center text-primary text-sm">
                 <span class="material-symbols-outlined text-[18px]">directions_car</span>
@@ -188,10 +245,10 @@
 
         <!-- Navigation Links (hidden on mobile) -->
         <div class="hidden sm:flex items-center gap-1">
-            <button onclick="location.href='./index.html'" class="px-3 py-1.5 text-gray-300 hover:text-white rounded-full text-xs font-medium transition-colors hover:bg-white/10">Home</button>
-            <button onclick="location.href='./index.html#features'" class="px-3 py-1.5 text-gray-300 hover:text-white rounded-full text-xs font-medium transition-colors hover:bg-white/10">Features</button>
-            <button onclick="location.href='./index.html#about'" class="px-3 py-1.5 text-gray-300 hover:text-white rounded-full text-xs font-medium transition-colors hover:bg-white/10">About</button>
-            <button onclick="location.href='./index.html#contact'" class="px-3 py-1.5 text-gray-300 hover:text-white rounded-full text-xs font-medium transition-colors hover:bg-white/10">Contact</button>
+            <button onclick="location.href='./index.html'" class="dash-nav-link px-3 py-1.5 text-gray-300 hover:text-white rounded-full text-xs font-medium transition-colors hover:bg-white/10">Home</button>
+            <button onclick="location.href='./index.html#features'" class="dash-nav-link px-3 py-1.5 text-gray-300 hover:text-white rounded-full text-xs font-medium transition-colors hover:bg-white/10">Features</button>
+            <button onclick="location.href='./index.html#about'" class="dash-nav-link px-3 py-1.5 text-gray-300 hover:text-white rounded-full text-xs font-medium transition-colors hover:bg-white/10">About</button>
+            <button onclick="location.href='./index.html#contact'" class="dash-nav-link px-3 py-1.5 text-gray-300 hover:text-white rounded-full text-xs font-medium transition-colors hover:bg-white/10">Contact</button>
         </div>
 
         <div class="flex items-center gap-1 sm:gap-3">
@@ -361,6 +418,17 @@
 
         <!-- Main Map Area -->
         <main id="mapContainer" class="flex-1 relative bg-[#0f151b] overflow-hidden">
+            <!-- Map Skeleton Loading -->
+            <div id="mapSkeleton" class="absolute inset-0 z-20 bg-[#0f151b] flex flex-col items-center justify-center">
+                <div class="w-full h-full p-4 flex flex-col gap-3">
+                    <div class="skeleton-shimmer flex-1 rounded-xl"></div>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                        <div class="w-12 h-12 rounded-full border-3 border-[#233648] border-t-primary animate-spin"></div>
+                        <p class="text-[#92adc9] text-sm font-medium">Loading map...</p>
+                        <p class="text-[#5a7d99] text-xs">Getting your location</p>
+                    </div>
+                </div>
+            </div>
             <div id="dashboardMap" class="w-full h-full"></div>
 
             <!-- Mobile Close Button -->
@@ -536,6 +604,12 @@
     <script src="notification-manager.js"></script>
 
     <script>
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const nav = document.getElementById('dashNav');
+            if (nav) nav.classList.toggle('scrolled', window.scrollY > 40);
+        }, { passive: true });
+
         let dashboardMap = null;
         let pickerMap = null;
         let mapMode = null; // Track whether map is for 'pickup' or 'destination'
@@ -746,6 +820,21 @@
                 maxZoom: 19
             }).addTo(dashboardMap);
 
+            // Smooth fade-out for map skeleton
+            function dismissMapSkeleton() {
+                const skel = document.getElementById('mapSkeleton');
+                if (!skel || skel.classList.contains('fade-out')) return;
+                skel.classList.add('fade-out');
+                skel.addEventListener('transitionend', () => skel.remove(), { once: true });
+                // Safety fallback in case transitionend doesn't fire
+                setTimeout(() => { if (skel.parentNode) skel.remove(); }, 1000);
+            }
+
+            // Hide map skeleton once tiles start loading
+            dashboardMap.once('load', dismissMapSkeleton);
+            // Fallback: hide skeleton after 3s even if 'load' event doesn't fire
+            setTimeout(dismissMapSkeleton, 3000);
+
             // Show pickup location marker if available
             if (destinationLocation && destinationLocation.lat && destinationLocation.lng) {
                 L.circleMarker([destinationLocation.lat, destinationLocation.lng], {
@@ -920,7 +1009,30 @@
                 }
 
                 const ridesList = document.getElementById('ridesList');
-                ridesList.innerHTML = '<div class="text-center py-8"><div class="loading-spinner mx-auto mb-2"></div><p class="text-[#92adc9]">🔍 Searching for rides...</p><p class="text-xs text-[#5a7d99] mt-2">Real-time matching in progress...</p></div>';
+                ridesList.innerHTML = `
+                    <div class="space-y-4 animate-pulse">
+                        ${[1,2,3].map(() => `
+                        <div class="skeleton-card">
+                            <div class="flex gap-4">
+                                <div class="skeleton-shimmer w-12 h-12 rounded-full flex-shrink-0"></div>
+                                <div class="flex-1 space-y-2">
+                                    <div class="skeleton-shimmer h-4 w-3/4 rounded"></div>
+                                    <div class="flex gap-3">
+                                        <div class="skeleton-shimmer h-3 w-16 rounded"></div>
+                                        <div class="skeleton-shimmer h-3 w-12 rounded"></div>
+                                    </div>
+                                </div>
+                                <div class="skeleton-shimmer h-5 w-20 rounded-full"></div>
+                            </div>
+                            <div class="mt-3 space-y-2">
+                                <div class="flex justify-between"><div class="skeleton-shimmer h-3 w-24 rounded"></div><div class="skeleton-shimmer h-3 w-16 rounded"></div></div>
+                                <div class="flex justify-between"><div class="skeleton-shimmer h-3 w-20 rounded"></div><div class="skeleton-shimmer h-3 w-14 rounded"></div></div>
+                            </div>
+                            <div class="skeleton-shimmer mt-3 h-10 w-full rounded-lg"></div>
+                        </div>`).join('')}
+                    </div>
+                    <p class="text-center text-[#92adc9] text-xs mt-3">⚡ Searching for rides...</p>
+                `;
 
                 // Calculate the distance between rider's pickup and dropoff
                 const riderDistance = calculateDistance(
@@ -1082,6 +1194,27 @@
         // Load accepted/active trips for the rider
         async function loadAcceptedRides() {
             try {
+                // Show skeleton while loading
+                const acceptedList = document.getElementById('acceptedRidesList');
+                acceptedList.innerHTML = `
+                    <div class="space-y-2 animate-pulse">
+                        ${[1,2].map(() => `
+                        <div class="skeleton-card p-2">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="skeleton-shimmer w-8 h-8 rounded-full flex-shrink-0"></div>
+                                <div class="flex-1 space-y-1">
+                                    <div class="skeleton-shimmer h-3 w-24 rounded"></div>
+                                    <div class="skeleton-shimmer h-2 w-12 rounded"></div>
+                                </div>
+                                <div class="skeleton-shimmer h-4 w-14 rounded"></div>
+                            </div>
+                            <div class="flex gap-1 mt-1">
+                                <div class="skeleton-shimmer h-6 flex-1 rounded"></div>
+                                <div class="skeleton-shimmer h-6 flex-1 rounded"></div>
+                            </div>
+                        </div>`).join('')}
+                    </div>
+                `;
                 const response = await TripServiceAPI.getRiderTrips();
                 if (response && response.trips) {
                     const acceptedTrips = response.trips.filter(trip => {
