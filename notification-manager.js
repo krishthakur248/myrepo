@@ -5,19 +5,23 @@ class NotificationManager {
     static socket = null;
 
     // Initialize socket.io connection for notifications
-    static initializeSocket() {
+    static async initializeSocket() {
         if (this.socket) return; // Already initialized
+
+        const socketClient = await loadSocketIoClient();
+        if (typeof socketClient !== 'function') {
+            console.warn('[NOTIFICATIONS] Socket.IO client is unavailable right now.');
+            return;
+        }
 
         // Connect to Socket.io server (uses SOCKET_SERVER_URL from api-config.js)
         const socketUrl = SOCKET_SERVER_URL;
 
-        // Using Socket.io client library (added via CDN)
-        if (typeof io !== 'undefined') {
-            this.socket = io(socketUrl, {
-                auth: {
-                    token: apiClient.getToken()
-                }
-            });
+        this.socket = socketClient(socketUrl, {
+            auth: {
+                token: apiClient.getToken()
+            }
+        });
 
             // Listen for notifications
             this.socket.on('notification', (notification) => {

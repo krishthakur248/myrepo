@@ -16,23 +16,28 @@ class MatchingService {
   /**
    * Initialize Socket.IO connection
    */
-  initializeSocket() {
+  async initializeSocket() {
     if (this.socket && this.socket.connected) {
       return; // Already connected
     }
 
     try {
-      // Get server URL from global API_CONFIG or fallback to localhost
-      let serverUrl = 'http://localhost:5001';
+      const socketClient = await loadSocketIoClient();
+      if (typeof socketClient !== 'function') {
+        console.warn('[SOCKET] Socket.IO client is unavailable right now.');
+        return;
+      }
+
+      let serverUrl = '';
       if (typeof API_CONFIG !== 'undefined' && API_CONFIG.SOCKET_SERVER_URL) {
         serverUrl = API_CONFIG.SOCKET_SERVER_URL;
       } else if (typeof ACTIVE_SERVER_URL !== 'undefined') {
         serverUrl = ACTIVE_SERVER_URL;
       }
-      
+
       const token = localStorage.getItem('authToken');
 
-      this.socket = io(serverUrl, {
+      this.socket = socketClient(serverUrl, {
         auth: { token },
         transports: ['websocket', 'polling'],
         reconnection: true,
@@ -317,7 +322,7 @@ const matchingService = new MatchingService();
  * Initialize matching service on page load
  */
 function initializeMatchingService() {
-  matchingService.initializeSocket();
+  void matchingService.initializeSocket();
   console.log('[MATCHING-SERVICE] Initialized');
 }
 
