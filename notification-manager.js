@@ -23,55 +23,54 @@ class NotificationManager {
             }
         });
 
-            // Listen for notifications
-            this.socket.on('notification', (notification) => {
-                console.log('Notification received:', notification);
-                this.handleNotification(notification);
-            });
+        // Listen for notifications
+        this.socket.on('notification', (notification) => {
+            console.log('Notification received:', notification);
+            this.handleNotification(notification);
+        });
 
-            // Listen for new messages
-            this.socket.on('new-message', (data) => {
-                console.log('New message received:', data);
-                this.handleNewMessage(data);
-            });
+        // Listen for new messages
+        this.socket.on('new-message', (data) => {
+            console.log('New message received:', data);
+            this.handleNewMessage(data);
+        });
 
-            // Listen for ride status updates
-            this.socket.on('ride-status-update', (data) => {
-                console.log('Ride status updated:', data);
-                this.handleRideStatusUpdate(data);
-            });
+        // Listen for ride status updates
+        this.socket.on('ride-status-update', (data) => {
+            console.log('Ride status updated:', data);
+            this.handleRideStatusUpdate(data);
+        });
 
-            // Listen for new rider requests (driver side)
-            this.socket.on('new-rider-request', (data) => {
-                console.log('New rider request received:', data);
-                this.handleNewRiderRequest(data);
-            });
+        // Listen for new rider requests (driver side)
+        this.socket.on('new-rider-request', (data) => {
+            console.log('New rider request received:', data);
+            this.handleNewRiderRequest(data);
+        });
 
-            // Listen for driver location updates (real-time)
-            this.socket.on('driver-location-update', (data) => {
-                console.log('[LOCATION] Driver location update received via NotificationManager socket:', data);
-                // Store in global window object for map updates
-                if (!window.driverLocations) {
-                    window.driverLocations = {};
-                }
-                window.driverLocations[data.tripId] = {
-                    lat: data.lat,
-                    lng: data.lng,
-                    timestamp: data.timestamp,
-                    driverId: data.driverId
-                };
-                console.log('[LOCATION] Stored in window.driverLocations:', window.driverLocations[data.tripId]);
-            });
+        // Listen for driver location updates (real-time)
+        this.socket.on('driver-location-update', (data) => {
+            console.log('[LOCATION] Driver location update received via NotificationManager socket:', data);
+            // Store in global window object for map updates
+            if (!window.driverLocations) {
+                window.driverLocations = {};
+            }
+            window.driverLocations[data.tripId] = {
+                lat: data.lat,
+                lng: data.lng,
+                timestamp: data.timestamp,
+                driverId: data.driverId
+            };
+            console.log('[LOCATION] Stored in window.driverLocations:', window.driverLocations[data.tripId]);
+        });
 
-            // Handle connection events
-            this.socket.on('connect', () => {
-                console.log('✓ Connected to notification server');
-            });
+        // Handle connection events
+        this.socket.on('connect', () => {
+            console.log('✓ Connected to notification server');
+        });
 
-            this.socket.on('disconnect', () => {
-                console.log('✗ Disconnected from notification server');
-            });
-        }
+        this.socket.on('disconnect', () => {
+            console.log('✗ Disconnected from notification server');
+        });
     }
 
     // Handle incoming notification
@@ -240,6 +239,8 @@ class NotificationManager {
         }
     }
 }
+
+window.NotificationManager = NotificationManager;
 
 // Add CSS for notification animations
 const style = document.createElement('style');

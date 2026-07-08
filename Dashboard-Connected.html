@@ -710,6 +710,13 @@
             return distance;
         }
 
+        function getSafeMapCenter() {
+            if (userLocation && typeof userLocation.lat === 'number' && typeof userLocation.lng === 'number') {
+                return userLocation;
+            }
+            return { lat: 28.6139, lng: 77.2090 }; // Default to Delhi if location is unavailable
+        }
+
         async function loadDashboard() {
             try {
                 const user = AuthService.getCurrentUser();
@@ -807,10 +814,21 @@
         }
 
         function initializeMap() {
+            if (typeof L === 'undefined') {
+                console.warn('[MAP] Leaflet is not available yet.');
+                return;
+            }
+
+            const mapEl = document.getElementById('dashboardMap');
+            if (!mapEl) {
+                console.warn('[MAP] Dashboard map container is missing.');
+                return;
+            }
+
             if (dashboardMap) dashboardMap.remove();
 
-            // Always center on user's current location
-            const mapCenter = [userLocation.lat, userLocation.lng];
+            const safeLocation = getSafeMapCenter();
+            const mapCenter = [safeLocation.lat, safeLocation.lng];
 
             dashboardMap = L.map('dashboardMap').setView(mapCenter, 15);
 
@@ -833,6 +851,11 @@
             dashboardMap.once('load', dismissMapSkeleton);
             // Fallback: hide skeleton after 3s even if 'load' event doesn't fire
             setTimeout(dismissMapSkeleton, 3000);
+            setTimeout(() => {
+                if (dashboardMap) {
+                    dashboardMap.invalidateSize();
+                }
+            }, 250);
 
             // Show pickup location marker if available
             if (destinationLocation && destinationLocation.lat && destinationLocation.lng) {
@@ -848,7 +871,7 @@
             }
 
             // Also show user's current location
-            L.circleMarker([userLocation.lat, userLocation.lng], {
+            L.circleMarker([safeLocation.lat, safeLocation.lng], {
                 radius: 6,
                 fillColor: '#10b981',
                 color: '#fff',
@@ -866,7 +889,8 @@
             setTimeout(() => {
                 if (pickerMap) pickerMap.remove();
 
-                pickerMap = L.map('pickerMap').setView([userLocation.lat, userLocation.lng], 15);
+                const pickerCenter = getSafeMapCenter();
+                pickerMap = L.map('pickerMap').setView([pickerCenter.lat, pickerCenter.lng], 15);
 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '&copy; OpenStreetMap'

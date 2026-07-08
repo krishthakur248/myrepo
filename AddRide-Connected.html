@@ -915,10 +915,14 @@
             await loadActiveTrip(); // Check if driver has an active trip
 
             // Initialize notification system
-            NotificationManager.initializeSocket();
-            const user = AuthService.getCurrentUser();
-            if (user && user.id) {
-                NotificationManager.joinUserRoom(user.id);
+            if (typeof NotificationManager !== 'undefined') {
+                NotificationManager.initializeSocket();
+                const user = AuthService.getCurrentUser();
+                if (user && user.id) {
+                    NotificationManager.joinUserRoom(user.id);
+                }
+            } else {
+                console.warn('[NOTIFICATIONS] NotificationManager is not available yet.');
             }
 
             // Setup Socket.io listeners for real-time message updates
@@ -1321,7 +1325,9 @@
 
                     // Only do heavy setup on initial load
                     if (isInitialLoad) {
-                        NotificationManager.joinTripRoom(trip._id);
+                        if (typeof NotificationManager !== 'undefined') {
+                            NotificationManager.joinTripRoom(trip._id);
+                        }
                         if (!window.driverSocket || !window.driverSocket.connected) {
                             setupSocketListeners();
                         }
