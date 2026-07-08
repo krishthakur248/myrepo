@@ -630,7 +630,12 @@
             }
             populateProfileEmail();
             // Initialize NotificationManager socket for real-time updates
-            NotificationManager.initializeSocket();
+            const notificationManager = window.NotificationManager || NotificationManager;
+            if (notificationManager && typeof notificationManager.initializeSocket === 'function') {
+                notificationManager.initializeSocket();
+            } else {
+                console.warn('[NOTIFICATIONS] NotificationManager is unavailable on dashboard startup.');
+            }
             await loadDashboard();
         });
 
@@ -756,33 +761,62 @@
             displayRides(window.availableRides, lastRiderDistance);
         }
 
+        async function getFallbackLocationFromIp() {
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+                if (data && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+                    return { lat: data.latitude, lng: data.longitude };
+                }
+            } catch (error) {
+                console.warn('[LOCATION] IP-based fallback failed:', error);
+            }
+            return null;
+        }
+
         async function getUserLocation() {
             return new Promise((resolve) => {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                            userLocation = {
-                                lat: position.coords.latitude,
-                                lng: position.coords.longitude
-                            };
-                            document.getElementById('pickupInput').value = `📍 ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
-                            // Reverse geocode to show place name
-                            reverseGeocode(userLocation.lat, userLocation.lng).then(name => {
-                                if (name) document.getElementById('pickupInput').value = `📍 ${name}`;
-                            });
-                            showNotification('✓ Location detected', 'success');
-                            resolve();
-                        },
-                        (error) => {
-                            console.error('Geolocation error:', error);
-                            resolve();
-                        }
-                    );
-                } else {
+                if (!navigator.geolocation) {
                     console.warn('Geolocation not supported');
                     showNotification('Geolocation unavailable', 'warning');
                     resolve();
+                    return;
                 }
+
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        if (document.getElementById('pickupInput')) {
+                            document.getElementById('pickupInput').value = `📍 ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
+                        }
+                        reverseGeocode(userLocation.lat, userLocation.lng).then(name => {
+                            const pickupInput = document.getElementById('pickupInput');
+                            if (name && pickupInput) pickupInput.value = `📍 ${name}`;
+                        });
+                        showNotification('✓ Location detected', 'success');
+                        resolve();
+                    },
+                    async (error) => {
+                        console.warn('[LOCATION] Geolocation failed, trying fallback:', error);
+                        const fallbackLocation = await getFallbackLocationFromIp();
+                        if (fallbackLocation) {
+                            userLocation = fallbackLocation;
+                            const pickupInput = document.getElementById('pickupInput');
+                            if (pickupInput) {
+                                pickupInput.value = `📍 ${fallbackLocation.lat.toFixed(4)}, ${fallbackLocation.lng.toFixed(4)}`;
+                            }
+                            showNotification('✓ Approximate location detected', 'info');
+                        } else {
+                            userLocation = getSafeMapCenter();
+                            showNotification('Using default location for map view', 'warning');
+                        }
+                        resolve();
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+                );
             });
         }
 
@@ -825,6 +859,11 @@
                 return;
             }
 
+            const mapContainer = document.getElementById('mapContainer');
+            if (mapContainer) {
+                mapContainer.classList.add('show');
+            }
+
             if (dashboardMap) dashboardMap.remove();
 
             const safeLocation = getSafeMapCenter();
@@ -856,6 +895,11 @@
                     dashboardMap.invalidateSize();
                 }
             }, 250);
+            setTimeout(() => {
+                if (dashboardMap) {
+                    dashboardMap.invalidateSize();
+                }
+            }, 1000);
 
             // Show pickup location marker if available
             if (destinationLocation && destinationLocation.lat && destinationLocation.lng) {
